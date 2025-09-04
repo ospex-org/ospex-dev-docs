@@ -34,7 +34,7 @@ This repository contains architecture documentation, development milestones, wor
 - **Status**: Testing phase, debugging data consistency issues
 
 ## Quick Links
-- [System Overview](architecture/system-overview.md) - Complete architecture documentation
+- [System Overview](architecture/ospex_system_overview.md) - Complete architecture documentation
 - [Git Workflow](workflows/git-workflow.md) - Development procedures
 - [Current Milestones](milestones/) - Active and completed work
 
