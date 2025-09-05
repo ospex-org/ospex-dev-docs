@@ -1,7 +1,7 @@
 # Milestone 001: Odds System Documentation & Display Fix
-*Created: January 3, 2025*  
-*Target Completion: January 10, 2025*  
-*Status: 🟡 Planning*
+*Created: September 3, 2025*  
+*Target Completion: September 3, 2025*  
+*Status: ✅ Complete (staged)*
 
 ## Problem Statement
 User enters 2.60 decimal odds on frontend → sees 2.59 on profile page → wastes hours debugging whether bug is in contracts, Firebase, or frontend. Need to understand and document the complete odds flow, then fix display inconsistencies.

@@ -1,7 +1,7 @@
 # Milestone 002: Leaderboard Position Event Handler Testing
 *Created: September 4, 2025*  
 *Target Completion: September 4, 2025*  
-*Status: 🟠 In Progress*
+*Status: 🚫 Blocked*
 
 ## Problem Statement
 Need to test the complete flow of LEADERBOARD_POSITION_ADDED event handling to ensure positions are properly added to leaderboards with correct validation. Must verify that advantageous positions are rejected while poor odds positions are accepted, and that Firebase correctly captures and stores the event data.
@@ -44,72 +44,61 @@ With the new unified Firebase functions index.ts ready for deployment, we need t
   - Verify frontend can connect to Firebase (skipping, this will become apparent if not connected)
   - Test that jsonodds data is current (skipping, this should be automatic)
 
-### Phase 2: Happy Path Testing (45 mins)
-- [ ] **Create Poor Odds Position**
-  - Use frontend to create position with odds disadvantageous to maker
-  - Example: If market odds favor Team A at -150, create position favoring Team B at +200
-  - Ensure position amount meets leaderboard minimum requirements
-  - Record: position ID, odds entered, timestamp
+### Phase 2: Happy Path Testing - Specific Test Cases
 
-- [ ] **Verify Event Emission**
-  - Check contract event logs for LEADERBOARD_POSITION_ADDED event
-  - Confirm event contains: leaderboardId, userId, positionId, odds data
-  - Verify event timestamp and transaction hash
+**Market Context:** Boston vs. Arizona MLB ML
+- Market: Boston -122 (1.82 decimal), Arizona +111 (2.11 decimal)  
+- Leaderboard: 25% odds enforcement, 1-3 USDC position limits
+
+**Test Case 1: Acceptable Poor Odds Position**
+- [ ] **Create Boston position at 1.37 decimal odds, 3 USDC**
+  - This is roughly 25% worse than market (should be accepted)
+  - Position size within 1-3 USDC range
+  - Record: position ID, leaderboard acceptance
+
+**Test Case 2: Acceptable Poor Odds Position (Arizona side)**
+- [ ] **Create Arizona position at 1.58 decimal odds, 1.5 USDC**
+  - This is roughly 25% worse than market (should be accepted)
+  - Position size within range
+  - Record: position ID, leaderboard acceptance
+
+**Test Case 3: Over-Limit Position Size**
+- [ ] **Create Boston position at 1.40 decimal odds, 5 USDC**
+  - Odds are acceptable (worse than 25% threshold)
+  - Position size exceeds 3 USDC limit
+  - **Expected**: Only 3 USDC should be added to leaderboard
+  - Record: actual amount added vs. position size
 
 - [ ] **Validate Firebase Storage**
-  - Check Firebase console for new document in leaderboards collection
-  - Verify all event data is properly stored
+  - Check Firebase console for new documents in leaderboards collection
+  - Verify event data is properly stored
   - Confirm user position appears in leaderboard entries
   - Check data format matches expected schema
 
 - [ ] **Frontend Display Verification**
-  - Refresh leaderboard page
   - Confirm position appears in user's leaderboard entries
-  - Verify odds display correctly (no 2.60→2.59 issues)
-  - Check leaderboard ranking calculation
 
-### Phase 3: Rejection Path Testing (30 mins)
-- [ ] **Attempt Advantageous Position Add**
-  - Same contest, attempt to add the taker side of the position
-  - This should have favorable odds and be rejected
-  - Try to add to same leaderboard
+### Phase 3: Rejection Path Testing
+
+**Test Case 4: Advantageous Odds (Should Reject)**
+- [ ] **Attempt Boston position at 2.28 decimal odds, 2 USDC**
+  - This is gt 25% better than market (should be rejected)
+  - **Expected**: Transaction should revert or position rejected for leaderboard
   - Record: error message, transaction status
+
+**Test Case 5: Advantageous Odds (Arizona side)**
+- [ ] **Attempt Arizona position at 2.64 decimal odds, 2 USDC**
+  - This is gt 25% better than market (should be rejected)
+  - **Expected**: Position rejected for leaderboard
+  - Record: rejection mechanism
 
 - [ ] **Verify Rejection Behavior**
   - Confirm transaction reverts at contract level
-  - Check that no LEADERBOARD_POSITION_ADDED event is emitted
-  - Verify Firebase doesn't receive invalid event
   - Confirm frontend shows appropriate error message
 
 ### Phase 4: Data Flow Validation (15 mins)
 - [ ] **Complete Flow Documentation**
-  - Document exact event data structure received
   - Verify no data transformation errors
-  - Confirm timestamp handling is correct
-  - Check odds format consistency
-
-## Success Criteria
-
-### Technical Acceptance
-- [ ] Poor odds position successfully added to leaderboard
-- [ ] LEADERBOARD_POSITION_ADDED event emitted with correct data
-- [ ] Firebase receives and stores event data without errors
-- [ ] Advantageous odds position is properly rejected
-- [ ] No event emitted for rejected position
-- [ ] Frontend correctly displays leaderboard position
-
-### Data Integrity Acceptance  
-- [ ] Event data in Firebase matches contract event exactly
-- [ ] Position odds display correctly on frontend
-- [ ] Leaderboard ranking calculation includes new position
-- [ ] No 2.60→2.59 type display bugs
-- [ ] Timestamp conversion works correctly
-
-### User Experience Acceptance
-- [ ] Clear error message for rejected advantageous position
-- [ ] Leaderboard updates in real-time after position add
-- [ ] User can see their position in leaderboard entries
-- [ ] No confusing UI states or loading issues
 
 ## Test Data Requirements
 
@@ -120,8 +109,8 @@ With the new unified Firebase functions index.ts ready for deployment, we need t
 - **Contest** with clear favorites/underdogs
 
 ### Position Requirements  
-- **Poor odds example**: Bet on underdog at worse than market odds
-- **Good odds example**: Take favorable side that should be rejected
+- **Poor odds example**: Enter leaderboard with position that has worse than market odds
+- **Good odds example**: Take favorable odds that should be rejected
 - **Sufficient balance** for test positions
 - **Clear market context** to determine advantageous vs poor odds
 
@@ -142,7 +131,6 @@ With the new unified Firebase functions index.ts ready for deployment, we need t
 
 ## Files to Modify
 - `ospex-firebase/functions/src/index.ts` (deploy new version)
-- Remove: `CFPv1.json`, `ContestOracleResolved.json` from repo
 
 ## Expected Outcomes
 
@@ -161,9 +149,44 @@ With the new unified Firebase functions index.ts ready for deployment, we need t
 
 ## Next Steps After Completion
 - Create milestone for frontend leaderboard UI improvements
+
+## Milestone Status: Blocked by Core Contract Dependency
+
+### What Was Accomplished ✅
+- [x] Deploy Firebase Functions with unified index.ts
+- [x] Fixed odds display issues across frontend
+- [x] Updated LeaderboardModule.sol to emit oddsPairId in events
+- [x] Successfully deployed new LeaderboardModule to testnet
+- [x] Updated contract addresses and ABIs in frontend
+- [x] Created new leaderboard successfully
+
+### Blocking Issue Discovered 🚫
+**Problem**: New LeaderboardModule references `processLeaderboardEntryFee()` function in OspexCore that exists in staged code but not in deployed core contract.
+
+**Impact**: Users cannot register for leaderboards, preventing completion of position testing.
+
+**Root Cause**: Incremental module deployment created dependency mismatch with core contract.
+
+**Resolution Required**: Full contract redeployment to sync all modules with core changes.
+
+### Technical Lessons Learned
+1. **Modular contracts have hidden dependencies** - deploying single modules can break due to core contract references
+2. **Event signature changes require coordinated deployment** - Firebase handlers, contracts, and frontend must align
+3. **Frontend validation needs enhancement** - warn users about unmatched positions < 1 USDC minimum
+
+### Files Modified This Session
+- `LeaderboardModule.sol` - Added oddsPairId to event emissions
+- `LeaderboardModule.t.sol` - Updated test expectations  
+- Firebase `index.ts` - Updated event handler signatures
+- Frontend odds display components - Fixed decimal/market odds conversions
+
+### Next Steps
+- **Immediate**: Acquire sufficient testnet POL for full redeployment
+- **Short-term**: Create milestone for complete contract redeployment
+- **Long-term**: Consider staged deployment testing strategy
+
+## Next Steps After Completion
 - Plan comprehensive leaderboard rules testing
-- Document event handler architecture for future development
-- Consider automated testing framework for event flows
 
 ---
 
