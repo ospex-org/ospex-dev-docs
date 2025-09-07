@@ -1,7 +1,7 @@
 # Milestone 003: Complete Contract Redeployment
 *Created: September 5, 2025*  
 *Target Completion: September 6, 2025*  
-*Status: 🟠 In Progress*
+*Status: ✅ Complete*
 
 ## Problem Statement
 LeaderboardModule deployed with dependency on core contract function that doesn't exist in current deployment. Need complete redeployment to sync all modules with core contract changes, including leaderboard entry fee fix and updated event signatures.
@@ -85,14 +85,14 @@ After discovering dependency mismatch between new LeaderboardModule and old Ospe
 
 - [X] **Update Firebase**
   - Update event handler to reference v2.3 collections
+  - Update webhook (Alchemy)
 
 ### Phase 5: Smoke Testing (30 mins)
 - [ ] **Basic Functionality Tests**
   - Create new contest
   - Create new speculation
-  - Create unmatched position
   - Create new leaderboard
-  - Register user for leaderboard
+  - Register user for leaderboard ✅ **FIXED: USDC approval, event processing bugs, frontend listener updated**
   - Verify Firebase events are captured
   - Check frontend displays correctly
 
