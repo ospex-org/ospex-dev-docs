@@ -88,7 +88,7 @@ After discovering dependency mismatch between new LeaderboardModule and old Ospe
   - Update webhook (Alchemy)
 
 ### Phase 5: Smoke Testing (30 mins)
-- [ ] **Basic Functionality Tests**
+- [X] **Basic Functionality Tests**
   - Create new contest
   - Create new speculation
   - Create new leaderboard
@@ -99,17 +99,17 @@ After discovering dependency mismatch between new LeaderboardModule and old Ospe
 ## Success Criteria
 
 ### Technical Acceptance
-- [ ] All contracts deployed successfully with cross-module dependencies working
-- [ ] Oracle integration functional with new consumer setup
-- [ ] Firebase receives events from all new contract addresses
-- [ ] Frontend connects to new contracts without errors
-- [ ] User can register for leaderboard (blocking issue resolved)
+- [X] All contracts deployed successfully with cross-module dependencies working
+- [X] Oracle integration functional with new consumer setup
+- [X] Firebase receives events from all new contract addresses
+- [X] Frontend connects to new contracts without errors
+- [X] User can register for leaderboard (blocking issue resolved)
 
 ### Process Acceptance
-- [ ] All repositories updated with new addresses/ABIs
-- [ ] Deployment process documented for future reference
-- [ ] Gas costs tracked and within expected range
-- [ ] Migration completed without data loss
+- [X] All repositories updated with new addresses/ABIs
+- [X] Deployment process documented for future reference
+- [X] Gas costs tracked and within expected range
+- [X] Migration completed without data loss
 
 ## Risk Mitigation
 
@@ -131,15 +131,13 @@ After discovering dependency mismatch between new LeaderboardModule and old Ospe
 ## Post-Deployment Checklist
 
 ### Immediate (Same Day)
-- [ ] Update system-overview.md with new contract addresses
-- [ ] Create git tags for deployment milestone
-- [ ] Test basic position creation end-to-end
-- [ ] Verify leaderboard user registration works
+- [X] Update system-overview.md with new contract addresses
+- [X] Verify leaderboard user registration works
 
 ### Next Session
-- [ ] Return to milestone 2 objectives with fixed contracts
-- [ ] Begin comprehensive leaderboard validation testing
-- [ ] Document any deployment issues encountered
+- [X] Return to milestone 2 objectives with fixed contracts
+- [X] Begin comprehensive leaderboard validation testing
+- [X] Document any deployment issues encountered
 
 ## Files to Update Post-Deployment
 - `frontend/src/config/contracts.ts` - Contract addresses
