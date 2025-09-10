@@ -1,6 +1,6 @@
 # Milestone 005: Validation Error Handling Improvement
 *Created: September 8, 2025*  
-*Target Completion: September 9, 2025*  
+*Target Completion: September 10, 2025*  
 *Status: 🟠 In Progress*
 
 ## Problem Statement
@@ -86,23 +86,22 @@ error LeaderboardModule__ValidationFailed(ValidationResult reason);
   - LeaderboardModule with proper error handling
   - Update contract addresses in frontend
 
-- [ ] **Test validation scenarios**
+- [X] **Test validation scenarios**
   - Position with odds too favorable (should revert with specific message)
   - Position with bet size too large (should succeed but be capped)
-  - Position within valid parameters (should succeed)
 
 ## Success Criteria
 
 ### Technical Acceptance
-- [ ] Validation failures now revert transactions with specific error messages
-- [ ] Users receive clear feedback about why position validation failed
-- [ ] Valid positions still register successfully
-- [ ] All existing validation logic preserved
+- [X] Validation failures now revert transactions with specific error messages
+- [X] Users receive clear feedback about why position validation failed (should happen prior to tx)
+- [X] Valid positions still register successfully
+- [X] All existing validation logic preserved
 
 ### User Experience Acceptance
-- [ ] Frontend displays meaningful error messages from contract reverts
-- [ ] No more silent failures during position registration
-- [ ] Users understand exactly what they need to fix
+- [X] Frontend displays meaningful error messages from contract reverts
+- [X] No more silent failures during position registration
+- [X] Users understand exactly what they need to fix
 
 ## Expected Validation Error Messages
 - **"Odds too favorable"** - when position odds exceed 25% threshold
