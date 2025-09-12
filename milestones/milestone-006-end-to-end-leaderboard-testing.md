@@ -1,6 +1,6 @@
 # Milestone 006: End-to-End Leaderboard Testing
 *Created: September 10, 2025*  
-*Target Completion: September 11, 2025*  
+*Target Completion: September 12, 2025*  
 *Status: 🚧 In Progress*
 
 ## Problem Statement
@@ -37,13 +37,13 @@ Previous milestones established leaderboard position creation and validation. Th
   - Call `increaseLeaderboardPositionAmount()` (should update to max of allowable USDC amount)
   - Observe event for event hash
 
-- [ ] **Create Firebase Event Handler**
+- [X] **Create Firebase Event Handler**
   - Add `LEADERBOARD_POSITION_UPDATED` event handler to `ospex-fdb/functions/src/index.ts`
   - Handle event data: `speculationId, user, oddsPairId, cappedAmount, positionType, leaderboardId`
   - Update existing leaderboard position amount in Firebase
   - Verify Firebase position amount updated correctly
 
-- [ ] **Frontend Integration**
+- [X] **Frontend Integration**
   - Add "Update Leaderboard Amount" button to positions that can be increased
   - Show current leaderboard amount vs. total matched amount
   - Handle transaction flow and success/error states
@@ -52,7 +52,7 @@ Previous milestones established leaderboard position creation and validation. Th
 
 **Background**: After a leaderboard ends, users submit their ROI during the claim window. The system tracks the highest ROI and winners list for prize distribution.
 
-- [ ] **Test Scenarios**
+- [X] **Test Scenarios**
   - Create leaderboard that expires soon (maybe EOD 20250911)
   - Add multiple positions for different users
   - Calculate expected ROI manually
@@ -60,7 +60,7 @@ Previous milestones established leaderboard position creation and validation. Th
   - Verify highest ROI tracking and ties handling
   - Observe events for event hash
 
-- [ ] **Create Firebase Event Handlers**
+- [X] **Create Firebase Event Handlers**
   - Add `LEADERBOARD_ROI_SUBMITTED` event handler
     - Handle: `leaderboardId, user, roi`
     - Store ROI submissions in Firebase
@@ -68,7 +68,7 @@ Previous milestones established leaderboard position creation and validation. Th
     - Handle: `leaderboardId, roi, user`
     - Update leaderboard highest ROI and winners list
 
-- [ ] **Frontend Integration**
+- [X] **Frontend Integration**
   - Add ROI submission form to completed leaderboards
   - Calculate and display expected ROI based on position outcomes
   - Show current highest ROI and winners
@@ -77,6 +77,7 @@ Previous milestones established leaderboard position creation and validation. Th
 ### Phase 3: Prize Claiming Testing (45 mins)
 
 **Background**: Users who submitted winning ROI can claim their share of the prize pool during the claim window.
+(Note: this failed, had to re-deploy Leaderboard and Treasury Module and re-test end-to-end)
 
 - [ ] **Test Scenarios**
   - Complete ROI submission phase with clear winner
