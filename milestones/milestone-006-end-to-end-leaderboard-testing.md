@@ -1,6 +1,6 @@
 # Milestone 006: End-to-End Leaderboard Testing
 *Created: September 10, 2025*  
-*Target Completion: September 12, 2025*  
+*Target Completion: September 15, 2025*  
 *Status: 🚧 In Progress*
 
 ## Problem Statement
@@ -77,7 +77,8 @@ Previous milestones established leaderboard position creation and validation. Th
 ### Phase 3: Prize Claiming Testing (45 mins)
 
 **Background**: Users who submitted winning ROI can claim their share of the prize pool during the claim window.
-(Note: this failed, had to re-deploy Leaderboard and Treasury Module and re-test end-to-end)
+(Note: this failed, had to re-deploy Treasury Module and re-test end-to-end)
+(Note: second attempt also failed, due to incorrect reference to Leaderboard prize pool amount)
 
 - [ ] **Test Scenarios**
   - Complete ROI submission phase with clear winner
