@@ -1,7 +1,7 @@
 # Milestone 006: End-to-End Leaderboard Testing
 *Created: September 10, 2025*  
-*Target Completion: September 15, 2025*  
-*Status: 🚧 In Progress*
+*Target Completion: September 17, 2025*  
+*Status: ✅ Complete*
 
 ## Problem Statement
 The remaining leaderboard lifecycle functions need testing and frontend integration. Users currently cannot update existing leaderboard positions when their matched amount increases, submit ROI for competition scoring, or claim prizes when leaderboards end.
@@ -79,20 +79,21 @@ Previous milestones established leaderboard position creation and validation. Th
 **Background**: Users who submitted winning ROI can claim their share of the prize pool during the claim window.
 (Note: this failed, had to re-deploy Treasury Module and re-test end-to-end)
 (Note: second attempt also failed, due to incorrect reference to Leaderboard prize pool amount)
+(Note: third attempt also failed, due to missing directional position check, no moneyline + spread position in the same leaderboard allowed)
 
-- [ ] **Test Scenarios**
+- [X] **Test Scenarios**
   - Complete ROI submission phase with clear winner
   - Calculate expected prize share (will likely be one winner taking all)
   - Test non-winner attempting to claim (should revert)
   - Call `claimLeaderboardPrize()` as winner
   - Verify USDC transfer and event emission
 
-- [ ] **Create Firebase Event Handler**
+- [X] **Create Firebase Event Handler**
   - Add `LEADERBOARD_PRIZE_CLAIMED` event handler
   - Handle: `leaderboardId, user, share`
   - Track claimed prizes in Firebase
 
-- [ ] **Frontend Integration**
+- [X] **Frontend Integration**
   - Show "Claim Prize" button for eligible winners
   - Display prize amount and claiming status
   - Handle transaction flow and confirmation
@@ -100,16 +101,16 @@ Previous milestones established leaderboard position creation and validation. Th
 ## Success Criteria
 
 ### Technical Acceptance
-- [ ] All three functions work correctly with proper error handling
-- [ ] Firebase event handlers capture and store all event data
-- [ ] Frontend displays and handles all new functionality
-- [ ] Complete leaderboard lifecycle functional end-to-end
+- [X] All three functions work correctly with proper error handling
+- [X] Firebase event handlers capture and store all event data
+- [X] Frontend displays and handles all new functionality
+- [X] Complete leaderboard lifecycle functional end-to-end
 
 ### User Experience Acceptance  
-- [ ] Users can easily update leaderboard positions when matched amounts increase
-- [ ] ROI submission process is clear and calculates correctly
-- [ ] Prize claiming is straightforward for winners
-- [ ] Error states provide helpful feedback
+- [X] Users can easily update leaderboard positions when matched amounts increase
+- [X] ROI submission process is clear and calculates correctly
+- [X] Prize claiming is straightforward for winners
+- [X] Error states provide helpful feedback
 
 ## Expected Events & Data Flow
 
