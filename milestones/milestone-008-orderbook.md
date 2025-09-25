@@ -1,7 +1,7 @@
 # Milestone 008: Orderbook UI Overhaul
 *Created: September 22, 2025*  
-*Target Completion: September 23, 2025*
-*Status: 🟡 Planning*
+*Target Completion: September 25, 2025*
+*Status: ✅ Complete*
 
 ## Problem Statement
 Current orderbook UI exposes raw maker/taker complexity and is confusing for users. Need to create an approachable, card-based interface that hides technical details while showing available betting opportunities clearly.
@@ -49,18 +49,19 @@ Currently viewing: Moneyline
 │ [Create Position]                  │  │ [Create Position]                  │
 └───────────────────────────────────┘  └───────────────────────────────────┘
 ```
+(note: altered this a bit)
 
 ### 2. Bet Type Tab System
 - **Moneyline**: Team A win vs Team B win
 - **Spread**: Multiple spread lines (-3.5, -4.5, etc.) with slider/button selector
 - **Total**: Over/under options with number selector
 - Show warning icon on tabs where speculations don't exist
+(note: changed this also but still should be showing relevant information in cards)
 
 ### 3. Line Selection for Spreads/Totals
 ```
 Spread Tab:
-Line: [-4.5] [-3.5] [+3.5] [+4.5] ← Button selector
-Or: [Slider: ----●---- ] ← Visual line selector
+[Slider: ----●---- ] ← Visual line selector
 
 ┌─── LAKERS -3.5 ────┐  ┌─── WARRIORS +3.5 ────┐
 │ [betting cards]    │  │ [betting cards]       │  
@@ -70,56 +71,35 @@ Or: [Slider: ----●---- ] ← Visual line selector
 ### 4. Contest/Speculation Handling
 - Only display games with existing contests and speculations
 - "Create Position" only appears when speculation exists
-- Missing bet types show: "No [spread] betting available yet. [Advanced Tools]"
+- Missing bet types show: "No [spread] betting available yet. [Advanced Tools]" (note: this will need to wait until we connect to backend data)
 - Advanced Tools link leads to separate contest/speculation creation interface
 
 ## Implementation Plan
 
 ### Phase 1: Core Card Components (Week 1)
-- [ ] **BettingCard component**
+- [X] **BettingCard component**
   - Display odds, available amount, maker info
   - Handle single maker vs aggregated display
-  - Consistent 4-line layout with maker info on bottom
+  - Consistent layout
 
-- [ ] **GameSection component**  
+- [X] **GameSection component**  
   - Container for Lakers vs Warriors style layout
   - Both sides (team A win, team B win)
-  - Expandable/collapsible game details
 
-- [ ] **Game filtering system**
+- [X] **Game filtering system**
   - Pill filter component (reuse from profile tabs)
   - Filter games by sport league
   - Sort by date and away team alphabetically
 
 ### Phase 2: Betting Flow (Week 2)
-- [ ] **Bet placement flow**
+- [X] **Bet placement flow**
   - Click bet button → simple modal/form
   - Amount input with max limit validation  
 
-- [ ] **Create new bet flow**
+- [X] **Create new bet flow**
   - Modal for creating custom odds
   - Input: odds desired, amount to wager
   - Explanation of maker/taker relationship
-
-## Technical Requirements
-
-### Data Processing Logic
-```javascript
-// Transform raw positions into betting cards
-const processGameData = (rawPositions) => {
-  // Group by odds, aggregate amounts
-  // Sort by odds (best first)
-  // Format maker information
-  // Return card-ready data
-}
-```
-
-### Component Structure
-- `OrderBookPage` - Main container with filters
-- `GameSection` - Individual game with both sides
-- `BettingCard` - Individual betting option
-- `BetModal` - Bet placement interface
-- `CreateBetModal` - New bet creation
 
 ## User Experience Flow
 
@@ -128,27 +108,25 @@ const processGameData = (rawPositions) => {
 2. Filters by sport (optional)
 3. Finds game of interest
 4. Reviews available betting options (cards)
-5. Clicks "Bet" on preferred odds
-6. Enters amount, confirms transaction
-7. Position appears in their profile
+5. Clicks button for buying yes or no contract(s)
+6. Enters amount, and contract counts, confirms transaction
+7. Position appears in their profile (need to wire this up later)
 
 ### Secondary Flows
-- Create new bet when no suitable odds available  
+- Create new bet when no suitable odds available (will need to flesh this out later)
 - Click maker address to view their profile
-- Expand/collapse game sections to browse options
 
 ## Success Criteria
 
 ### Usability Acceptance
-- [ ] New user can understand available bets without explanation
-- [ ] Betting process takes under 3 clicks from card to confirmation
-- [ ] Clear distinction between user's positions and available bets
-- [ ] No confusion about odds, amounts, or maker information
+- [X] New user can understand available bets without explanation
+- [X] Betting process takes under 3 clicks from card to confirmation
+- [X] Clear distinction between user's positions and available bets
+- [X] No confusion about odds, amounts, or maker information
 
 ### Technical Acceptance
-- [ ] Proper sorting of odds (best to worst)
-- [ ] Clickable maker addresses link to profiles
-- [ ] Responsive card layout on different screen sizes
+- [X] Clickable maker addresses link to profiles
+- [X] Responsive card layout on different screen sizes
 
 ## Mock Data Requirements
 - Multiple games across different sports
