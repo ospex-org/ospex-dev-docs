@@ -11,8 +11,8 @@ Clean, consistent agent data schema that matches smart contract requirements and
 
 ## Success Criteria
 - [X] `positionTypeString` correctly stores "Upper" or "Lower" (not team names)
-- [X] Agent stores lines in memory as .5 increments only (matching smart contracts) (pending)
-- [X] `theNumber` in agent_interests matches amoySpeculationsv2.3 format (whole number string) (pending)
+- [X] Agent stores lines in memory as .5 increments only (matching smart contracts)
+- [X] `theNumber` in agent_interests matches amoySpeculationsv2.3 format (whole number string)
 - [X] `reasoning` field stored in agent_interests
 - [X] Decision made on AwayTeam/HomeTeam field strategy
 - [X] `contestId` field removed (defer to M20)
