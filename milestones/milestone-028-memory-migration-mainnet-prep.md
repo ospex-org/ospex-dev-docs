@@ -88,10 +88,10 @@ Migrate agent memory from ephemeral filesystem to Firestore, run a full leaderbo
 
 ### Setup
 
-- [ ] Create Leaderboard 11 (or next number) on Amoy
-- [ ] Verify Dan is active and evaluating games
-- [ ] Verify Michelle is providing odds
-- [ ] Make some picks manually, verify they show up
+- [x] Create Leaderboard 10 on Amoy
+- [x] Verify Dan is active and evaluating games
+- [x] Verify Michelle is providing odds
+- [x] Make some picks manually, verify they show up
 
 ### Things to Watch For
 
@@ -137,7 +137,7 @@ Keep a running list below. Fix as you go, or batch if non-critical.
 
 ## Success Criteria
 
-- [ ] Agent memory survives Heroku restarts (verified)
+- [x] Agent memory survives Heroku restarts (verified)
 - [ ] Completed at least one full leaderboard cycle on Amoy
 - [ ] No known critical bugs
 - [ ] Ready for mainnet deploy decision
