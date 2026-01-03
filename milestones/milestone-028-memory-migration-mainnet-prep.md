@@ -107,8 +107,7 @@ Keep a running list below. Fix as you go, or batch if non-critical.
 
 | Bug | Severity | Status | Notes |
 |-----|----------|--------|-------|
-| Dan not scoring/claiming contests | Medium | Investigating | Fix implemented, watching |
-| No agent ↔ market maker auto-fill | Low | Deferred | Design decision needed. Manual matching for now. Potential solution: background job X mins before game time fills unmatched agent positions via Michelle. |
+| No agent ↔ market maker auto-fill | Low | Deferred | Design decision needed. Manual matching for now. Potential solution: background job X mins before game time fills unmatched agent positions via Michelle. (note: track 4 in this document should fix this) |
 | Neutral site games cause API mismatch | Low | Known Limitation | CFP games, etc. Workaround: use 2-of-3 APIs manually. Rare enough to not engineer a fix now. |
 | Group leaderboards | Low | Deferred | Need to be able to group leaderboards so that when a user wants to see only their leaderboard performance, it will not show just one (ie the current), but will show all official, will likely need a naming scheme for this to maintain consistency |
 | Firebase pruning | Low | Deferred | Prune decisions for agents (stored in array field `decisions` in agentMemory collection, agentName__network document), suggestion to prune after 30 days or archive |
@@ -141,6 +140,65 @@ Keep a running list below. Fix as you go, or batch if non-critical.
 - [ ] Completed at least one full leaderboard cycle on Amoy
 - [ ] No known critical bugs
 - [ ] Ready for mainnet deploy decision
+
+---
+
+## Track 4: Michelle User Matching (Track A - Post and Wait)
+
+**Goal:** Users can create positions from the Agent page, and Michelle evaluates/matches them on a scheduled cadence.
+
+### Architecture
+
+**Track A: "Post and Wait" (free)**
+- User creates position on-chain at their desired odds via Agent page
+- Michelle runs a scheduled matching job (every 15 min)
+- Job queries all unmatched positions
+- For each position: Is this game evaluated? Are odds within acceptable range? Is there exposure room?
+- If yes: Michelle creates matching position (up to her per-side limit)
+- If no: Position stays open for other counterparties or user can cancel
+
+### Current State
+
+- Michelle evaluates games and generates offers ✅
+- Agent page displays offers with odds line visualization ✅
+- Users can create positions from Agent page ✅
+- **Not implemented:** Scheduled job for Michelle to scan and match open positions
+
+### Tasks
+
+- [x] Verify user can create position from Agent page (Rangers game test)
+- [x] Build Michelle matching prompt:
+  - Input: open positions, current exposure, market odds, her original evaluations
+  - Output: decisions array with action (match/pass), amount, reason
+- [x] Create exposure tracking for Michelle in agentMemory:
+  - Track exposure per game, per side
+  - Update when matches occur
+  - Reset when games settle
+- [x] Create Michelle matching job:
+  - Query unmatched positions (Firebase)
+  - Query Michelle's current exposure (agentMemory)
+  - Query current market odds
+  - Build prompt with full landscape
+  - Execute Michelle's decisions
+  - Update exposure tracking
+- [x] Schedule job to run every 15 minutes on Heroku
+- [x] Add logging for Michelle's decisions (for debugging and future analysis)
+- [x] Test end-to-end: User creates position → Michelle evaluates on next run → Match (or pass with reason)
+
+### Success Criteria
+
+- [x] User creates position from Agent page
+- [x] Within 15 minutes, Michelle evaluates and matches (if within range)
+- [x] Match visible on leaderboard/positions
+- [x] If outside range, position remains open (no error, just unmatched)
+
+### Notes on pre-filtering for Michelle
+
+- Contest start time must be in the future (otherwise it dies in contestStarted)
+- Michelle must have an evaluation/offer doc for that jsonoddsId + market (otherwise you’ll hit the no evaluation present pre-filter)
+- For spread/total, line must match (theNumber) (otherwise you’ll hit the line mismatch pre-filter)
+- Position must exist such that suggestedTakerStakeUSDC >= MICHELLE_MIN_MATCH_USDC (otherwise you’ll hit the stake pre-filter)
+- Michelle must have capacity (maxMatchUSDC > 0) (otherwise you’ll hit the exposure pre-filter)
 
 ---
 
