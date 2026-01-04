@@ -2,7 +2,7 @@
 
 *Created: January 2, 2025*
 *Target Completion: Mid-January 2025*
-*Status: 🔴 Not Started*
+*Status: 🟠 In Progress*
 
 ---
 
@@ -222,22 +222,99 @@ Called via webhook after position creation:
 
 **Agent page updates:**
 
-- Add "Request Instant Quote (0.20 USDC)" button alongside current flow
-- Pre-flight loading state while checking availability
-- Quote response modal:
-  - If accepted: Show amount, 60-second countdown, "Accept & Create Position" button
-  - If rejected: Show reason, option to adjust odds
-- Fee transaction approval flow (standard USDC transfer)
-- Post-creation webhook call to trigger match
+## Proposed New Layout
 
-**Deterministic rejection UI:**
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ NFL  Seattle Seahawks vs San Francisco 49ers                 U 0 $ 0 USDC ^ |
+|     Jan 5, 7:00 PM CST                                                      │
+│      ┌─────────┐ ┌────────┐ ┌───────┐   ┌──────────┐ ┌───────────┐          │
+│      │Moneyline│ │ Spread │ │ Total │   │ Seahawks │ │   49ers   │          │
+│      └─────────┘ └────────┘ └───────┘   └──────────┘ └───────────┘          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Seattle Seahawks ML                              [⚙ View Options ▾]        │
+│                                                                             │
+│  ═══════════●═══════════════════════════════════════════════════════════    │
+│         Mkt 1.69    Agent 1.70                                              │
+│                                                                             │
+│  ┌────────────┐  ┌─────────────────┐              ┌──────────────────────┐  │
+│  │ Odds: 1.72 │  │ Review Position │              │ Status: Ready        │  │
+│  └────────────┘  └─────────────────┘              └──────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-After pre-flight check fails, show clear messaging:
-- "Market maker at capacity for this side"
-- "This game has not been evaluated"
-- "Game has already started"
+- Game header stays as-is except for the following changes:
+  - Change date format from showing only time to showing date and time (as is on order book page: Jan 3, 2026, 11:00 AM CST)
+  - Add user icon, count of users, dollar sign, amount, and USDC - exactly as-is on order book page, and right-align this but to the left of the existing chevron
+- Show Moneyline, Spread, Total and Team selectors all on the same line
+- Add View Options as a dropdown with checkboxes:
+  - Market odds (checked by default)
+  - Market Maker offer (checked by default)
+  - Existing user open positions (unchecked by default)
+  - Existing agent open positions (unchecked by default)
+  - Existing matched positions (unchecked by default)
+  - Market Maker notes (unchecked by default)
+- Number line stays the same, View Options toggles what appears ON the line (other positions, agent markers, etc.)
+- Add status area to last row, to right of existing odds and review position button
 
-No fee charged, no ambiguity.
+For Track B, the action row changes based on context:
+- "Ready" (default)
+- "Michelle is evaluating..." (after clicking request match in modal)
+- "Quote accepted, creating position..." (no extra in-app confirmations)
+- "Matched! ✓"
+- "Match attempt failed — your position is open and may be matched later."
+
+**Simplified Track B Flow:**
+
+The modal that appears on this page when Review Position is clicked will have the option to select track A or track be:
+Currently: Cancel, Request Match (2 buttons)
+New: Cancel, Create Position (Free), Request Match (0.20 USDC) (3 buttons)\n+- Fee amount is configurable (frontend reads via env var so it can be changed easily)\n+- Once Track B starts, there are no further on-site confirmations; wallet prompts are the confirmations
+
+User clicks "Request Match (0.20 USDC)"
+         │
+         ▼
+┌─────────────────────────┐
+│ Pre-flight check        │ (status area; modal closes immediately)
+│ "Checking availability" │
+└─────────────────────────┘
+         │
+         ├── FAIL → Show error, stop (no fee charged)
+         │
+         ▼ PASS
+┌─────────────────────────┐
+│ Wallet prompts fee tx   │ (0.20 USDC to fee wallet)
+└─────────────────────────┘
+         │
+         ├── User rejects → Stop (no fee, no position)
+         │
+         ▼ User approves
+┌─────────────────────────┐
+│ LLM evaluates           │ (modal unloads, progress bar in status area: "Michelle is evaluating...")
+└─────────────────────────┘
+         │
+         ├── REJECT → Show reason, stop (fee consumed, that's the deal)
+         │
+         ▼ ACCEPT
+┌─────────────────────────┐
+│ "Michelle will match    │
+│ up to 50 USDC"          │
+│                         │
+│ Wallet prompts position │ (position creation tx)
+└─────────────────────────┘
+         │
+         ├── User rejects → Quote expires eventually, fee consumed, no position
+         │
+         ▼ User approves
+┌─────────────────────────┐
+│ Position created        │
+│ Calling Michelle...     │ (webhook fires)
+└─────────────────────────┘
+         │
+         ▼
+┌─────────────────────────┐
+│ ✓ Matched!              │
+│ Michelle matched 50 USDC│
+└─────────────────────────┘
+
+Any necessary updates can go in the status area
 
 ---
 
