@@ -1,7 +1,7 @@
 # Firebase Collections Reference
 
 *Generated: January 19, 2026*
-*Last Updated: January 19, 2026*
+*Last Updated: January 24, 2026*
 
 This document provides a comprehensive reference for all Firebase Firestore collections used in the Ospex platform. It serves as the source of truth for understanding data structures, usage patterns, and migration planning.
 
@@ -26,6 +26,7 @@ This document provides a comprehensive reference for all Firebase Firestore coll
 | Collection | Documents | Purpose | Status |
 |------------|-----------|---------|--------|
 | `agentDecisions` | 42 | All agent decisions (Dan, Michelle) | Active |
+| `agentDecisionsArchive` | Variable | Archived decisions (preserves LLM reasoning) | Active |
 | `agentMemory` | 1 | Legacy nested agent memory | Deprecated |
 | `agentMeta` | 1 | Agent metadata and flags | Active |
 | `agentMatchHistory` | 0 | Empty, unused | Remove |
@@ -409,6 +410,29 @@ These collections mirror on-chain data, populated by cloud functions in `ospex-f
 ---
 
 ## Archive Collections
+
+### `agentDecisionsArchive`
+
+**Purpose:** Archived agent decisions. Preserves LLM reasoning and decision history after games start.
+
+**Document Count:** Variable (grows over time)
+
+**Archived When:** Games start (via `cleanupExpiredMemoryDecisions()` in agent.ts)
+
+**Key Fields:** Same as `agentDecisions` plus:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `archivedAt` | Timestamp | When the decision was archived |
+| `archiveReason` | string | Why it was archived (e.g., "cleanup_expired") |
+
+**Written By:** `ospex-agent-server/src/services/memoryService.ts::replaceDecisions()`
+
+**Retention:** Permanent (recommended: 365 days TTL)
+
+**Important:** This collection preserves LLM reasoning that would otherwise be lost when active decisions are cleaned up.
+
+---
 
 ### `agentOffers_archive`
 

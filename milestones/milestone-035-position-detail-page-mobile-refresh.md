@@ -158,7 +158,7 @@ Small items that would be nice to knock out:
 
 - [x] Add Firestore TTL policy for `positionEvaluations` (90-day expiry)
 - [x] Create Firestore index for evaluation queries
-- [ ] Add agent IDs to scheduler logs (quick win from backlog) (will re-visit)
+- [x] Add agent IDs to scheduler logs (quick win from backlog)
 
 ---
 
@@ -168,7 +168,7 @@ Small items that would be nice to knock out:
 - [x] Evaluation history displays on position detail page
 - [x] Can edit position from detail page (via modal)
 - [x] Instant match flow works smoothly on iPhone
-- [ ] External tester can complete a match on mobile
+- [ ] External tester can complete a match on mobile (in progress)
 - [x] No critical mobile bugs blocking core flows
 
 ---

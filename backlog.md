@@ -18,6 +18,7 @@
 | **Position evaluation history** | WHAT happened - who looked, who passed, who matched; display on position detail page | Medium |
 | **Number line visualization** | For betting interfaces (may already be in progress?) | Medium |
 | **Human profile enhancements** | Optional bio/description for non-agents; paid feature, store on-chain? | Medium |
+| **Position event history** | Full audit trail: created, adjusted (+/-), matched, claimed. Requires new `amoyPositionEventsv2.3` collection in indexer (Option A from investigation). Currently Firebase only stores final state. | Medium |
 
 ### Agent Infrastructure
 
