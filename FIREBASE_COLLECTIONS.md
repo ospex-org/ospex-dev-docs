@@ -1,7 +1,7 @@
 # Firebase Collections Reference
 
 *Generated: January 19, 2026*
-*Last Updated: January 24, 2026*
+*Last Updated: January 31, 2026*
 
 This document provides a comprehensive reference for all Firebase Firestore collections used in the Ospex platform. It serves as the source of truth for understanding data structures, usage patterns, and migration planning.
 
@@ -11,40 +11,44 @@ This document provides a comprehensive reference for all Firebase Firestore coll
 
 1. [Collection Overview](#collection-overview)
 2. [Agent Collections](#agent-collections)
-3. [Michelle-Specific Collections](#michelle-specific-collections)
-4. [On-Chain Synced Collections](#on-chain-synced-collections)
-5. [Off-Chain Reference Collections](#off-chain-reference-collections)
-6. [Archive Collections](#archive-collections)
-7. [Orphaned/Unused Collections](#orphanedunused-collections)
-8. [Consolidation Recommendations](#consolidation-recommendations)
-9. [Migration Notes](#migration-notes)
+3. [On-Chain Synced Collections](#on-chain-synced-collections)
+4. [Off-Chain Reference Collections](#off-chain-reference-collections)
+5. [Archive Collections](#archive-collections)
+6. [Orphaned/Unused Collections](#orphanedunused-collections)
+7. [Consolidation Status](#consolidation-status)
+8. [Migration Notes](#migration-notes)
 
 ---
 
 ## Collection Overview
 
-| Collection | Documents | Purpose | Status |
-|------------|-----------|---------|--------|
-| `agentDecisions` | 42 | All agent decisions (Dan, Michelle) | Active |
-| `agentDecisionsArchive` | Variable | Archived decisions (preserves LLM reasoning) | Active |
-| `agentMemory` | 1 | Legacy nested agent memory | Deprecated |
-| `agentMeta` | 1 | Agent metadata and flags | Active |
-| `agentMatchHistory` | 0 | Empty, unused | Remove |
-| `agentContextSnapshots` | 0 | Empty, interface exists | Keep (unused) |
-| `agent_interests` | 66 | Pre-position conviction tracking | Active |
-| `agentOffers` | 112 | Active market maker offers | Active |
-| `agentOffers_archive` | 2,747 | Expired offers | Active |
-| `michelleCalculations` | 56 | Tool audit log | Active |
-| `michelleDecisions` | 1 | Michelle final decisions | Low Usage |
-| `michelleQuotes` | 90 | Instant match quotes | Critical |
-| `usedFeeTxHashes` | 65 | Fee replay prevention | Critical |
-| `amoyContestsv2.3` | 242 | On-chain contests | Active |
-| `amoySpeculationsv2.3` | 207 | On-chain speculations | Active |
-| `amoyPositionsv2.3` | 397 | On-chain positions | Active |
-| `contests` | 179 | Off-chain game data | Active |
-| `speculations` | 1 | Off-chain spec tracking | Low Usage |
-| `contests_archive` | 8,892 | Historical games | Active |
-| `speculations_archive` | 87 | Historical specs | Active |
+| Collection | Purpose | Status |
+|------------|---------|--------|
+| `agentDecisions` | All agent decisions (Dan, Michelle) | Active |
+| `agentDecisionsArchive` | Archived decisions (preserves LLM reasoning, 90-day TTL) | Active |
+| `agentMemory` | Legacy nested agent memory | Deprecated |
+| `agentMeta` | Agent metadata and flags | Active |
+| `agentMatchHistory` | Empty, unused | Remove |
+| `agentContextSnapshots` | Decision context and reasoning snapshots | Active |
+| `agent_interests` | Pre-position conviction tracking | Active |
+| `agentOffers` | Active market maker offers | Active |
+| `agentOffers_archive` | Expired offers | Active |
+| `agentCalculations` | Tool audit log (exposure, odds comparison) | Active |
+| `agentQuotes` | Instant match quotes and evaluation progress | Critical |
+| `positionEvaluations` | Position evaluation audit trail (90-day TTL) | Active |
+| `usedFeeTxHashes` | Fee replay prevention | Critical |
+| `processedEvents` | Tracks processed blockchain events (ospex-fdb) | Active |
+| `insights` | User and agent insights | Active |
+| `amoyContestsv2.3` | On-chain contests | Active |
+| `amoySpeculationsv2.3` | On-chain speculations | Active |
+| `amoyPositionsv2.3` | On-chain positions | Active |
+| `amoyLeaderboardsv2.3` | On-chain leaderboards | Active |
+| `amoyLeaderboardRegistrationsv2.3` | Leaderboard user registrations | Active |
+| `amoyLeaderboardPositionsv2.3` | Positions in leaderboards | Active |
+| `contests` | Off-chain game data | Active |
+| `speculations` | Off-chain spec tracking | Low Usage |
+| `contests_archive` | Historical games | Active |
+| `speculations_archive` | Historical specs | Active |
 
 ---
 
@@ -192,23 +196,20 @@ This document provides a comprehensive reference for all Firebase Firestore coll
 
 ---
 
-## Michelle-Specific Collections
+### `agentQuotes`
 
-### `michelleQuotes`
-
-**Purpose:** Quote documents for the instant match flow. Each quote represents a user's request for Michelle to match their position.
-
-**Document Count:** 90
+**Purpose:** Quote documents for the instant match flow. Each quote represents a user's request for an agent (typically Michelle) to match their position. Renamed from `michelleQuotes` to support multi-agent architecture.
 
 **Document ID Format:** `{quoteId}__{network}`
 
-**Critical For:** Michelle's evaluation log in the frontend stepper
+**Critical For:** Agent evaluation log in the frontend stepper
 
 **Key Fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `quoteId` | string | UUID for this quote |
+| `agentId` | string | Agent identifier (e.g., "market_maker_michelle") |
 | `network` | string | Network name |
 | `userWallet` | string | Requesting user's wallet |
 | `jsonoddsId` | string | Game identifier |
@@ -217,14 +218,14 @@ This document provides a comprehensive reference for all Firebase Firestore coll
 | `side` | string | "away", "home" |
 | `requestedOdds` | number | User's requested odds |
 | `requestedAmount` | number | User's requested amount |
-| `quotedAmount` | number | Amount Michelle will match |
+| `quotedAmount` | number | Amount agent will match |
 | `feeTxHash` | string | Fee payment transaction hash |
 | `status` | string | "pending", "complete", "counter_pending", "rejected" |
 | `decision` | object | `{ decision, reason, matchAmount, counterOdds, confidence }` |
 | `counter` | object | Counter-offer details if applicable |
 | `progress` | array | Step-by-step evaluation progress (powers the UI) |
 | `preflightSnapshot` | object | Market state at request time |
-| `freshEvalOdds` | number | Michelle's fresh evaluation |
+| `freshEvalOdds` | number | Agent's fresh evaluation |
 | `freshEvalAt` | string | When fresh eval was computed |
 | `evalSnapshot` | object | Full evaluation context |
 | `marketOddsAtQuote` | object | Market odds at quote time |
@@ -234,23 +235,22 @@ This document provides a comprehensive reference for all Firebase Firestore coll
 | `createdAt` | Timestamp | Creation time |
 | `expiresAt` | Timestamp | Quote expiration |
 
-**Written By:** `ospex-agent-server/src/services/michelleQuotesService.ts`, `quoteProgressService.ts`
+**Written By:** `ospex-agent-server/src/services/agentQuotesService.ts`, `quoteProgressService.ts`
 
 **Read By:** Frontend evaluation log, instant match UI
 
 ---
 
-### `michelleCalculations`
+### `agentCalculations`
 
-**Purpose:** Audit log of all mathematical calculations Michelle performs. Used for debugging and transparency.
-
-**Document Count:** 56
+**Purpose:** Audit log of all mathematical calculations agents perform. Used for debugging and transparency. Renamed from `michelleCalculations` to support multi-agent architecture.
 
 **Key Fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | string | Calculation UUID |
+| `agentId` | string | Agent identifier |
 | `quoteId` | string | Associated quote |
 | `tool` | string | "compute_exposure", "compare_odds", "counter_odds" |
 | `ts` | string | ISO timestamp |
@@ -263,15 +263,67 @@ This document provides a comprehensive reference for all Firebase Firestore coll
 
 ---
 
-### `michelleDecisions`
+### `agentContextSnapshots`
 
-**Purpose:** Michelle's instant match decisions. Appears to overlap with `agentDecisions`.
+**Purpose:** Stores full context snapshots of what information agents considered when making decisions. Includes injuries, rosters, and other contextual data for "show your work" features.
 
-**Document Count:** 1 (very low usage)
+**Key Fields:**
 
-**Key Fields:** Similar to `agentDecisions` but Michelle-specific
+| Field | Type | Description |
+|-------|------|-------------|
+| `agentId` | string | Agent identifier |
+| `network` | string | Network name |
+| `snapshotType` | string | Type of snapshot |
+| `context` | object | Full context data (injuries, rosters, etc.) |
+| `createdAt` | Timestamp | Creation time |
 
-**Status:** Consider deprecating in favor of `agentDecisions`
+**Written By:** `ospex-agent-server/src/services/memoryService.ts`
+
+**Read By:** Insights features, debugging
+
+---
+
+### `positionEvaluations`
+
+**Purpose:** Audit trail of all position evaluations performed by agents. Provides transparency into agent decision-making process.
+
+**TTL:** 90 days (auto-deleted after expiration)
+
+**Key Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agentId` | string | Agent identifier |
+| `network` | string | Network name |
+| `evaluationId` | string | Unique evaluation ID |
+| `positionData` | object | Position details being evaluated |
+| `decision` | object | Agent's decision and reasoning |
+| `createdAt` | Timestamp | Creation time |
+| `expiresAt` | Timestamp | TTL expiration |
+
+**Written By:** `ospex-agent-server/src/services/memoryService.ts`
+
+**Read By:** Audit tools, insights features
+
+---
+
+### `insights`
+
+**Purpose:** Stores user and agent insights for the Insights tab feature.
+
+**Key Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | Insight type (e.g., "agent_decision", "user_activity") |
+| `agentId` | string | Associated agent (if applicable) |
+| `userWallet` | string | Associated user (if applicable) |
+| `content` | object | Insight data and reasoning |
+| `createdAt` | Timestamp | Creation time |
+
+**Written By:** `ospex-agent-server/src/http/insights.ts`
+
+**Read By:** Frontend Insights tab
 
 ---
 
@@ -293,7 +345,7 @@ This document provides a comprehensive reference for all Firebase Firestore coll
 | `quoteId` | string | Associated quote |
 | `userWallet` | string | User who paid the fee |
 
-**Written By:** `ospex-agent-server/src/services/michelleQuotesService.ts`
+**Written By:** `ospex-agent-server/src/services/agentQuotesService.ts`
 
 **Critical:** Do not delete - prevents double-claiming fees
 
@@ -378,6 +430,73 @@ These collections mirror on-chain data, populated by cloud functions in `ospex-f
 
 ---
 
+### `amoyLeaderboardsv2.3`
+
+**Purpose:** On-chain leaderboard data synced from blockchain events.
+
+**Key Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `leaderboardId` | string | On-chain leaderboard ID |
+| `name` | string | Leaderboard name |
+| `entryFee` | string | Entry fee in USDC (wei6) |
+| `prizePool` | string | Total prize pool |
+| `startTime` | Timestamp | Competition start |
+| `endTime` | Timestamp | Competition end |
+| `status` | string | Active/Completed |
+| `createdAt` | Timestamp | Creation time |
+
+---
+
+### `amoyLeaderboardRegistrationsv2.3`
+
+**Purpose:** User registrations for leaderboard competitions.
+
+**Key Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `leaderboardId` | string | Parent leaderboard |
+| `user` | string | User wallet address |
+| `registeredAt` | Timestamp | Registration time |
+| `entryFeePaid` | string | Entry fee paid |
+
+---
+
+### `amoyLeaderboardPositionsv2.3`
+
+**Purpose:** Positions within leaderboard competitions (tracking ROI).
+
+**Key Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `leaderboardId` | string | Parent leaderboard |
+| `positionId` | string | Position ID |
+| `user` | string | Position owner |
+| `roi` | number | Return on investment |
+| `rank` | number | Current rank |
+
+---
+
+### `processedEvents`
+
+**Purpose:** Tracks which blockchain events have been processed to prevent duplicate processing.
+
+**Key Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `eventId` | string | Event identifier |
+| `blockNumber` | number | Block number |
+| `transactionHash` | string | Transaction hash |
+| `processedAt` | Timestamp | Processing time |
+
+**Written By:** `ospex-fdb/functions/src/index.ts`
+
+---
+
 ## Off-Chain Reference Collections
 
 ### `contests`
@@ -415,7 +534,7 @@ These collections mirror on-chain data, populated by cloud functions in `ospex-f
 
 **Purpose:** Archived agent decisions. Preserves LLM reasoning and decision history after games start.
 
-**Document Count:** Variable (grows over time)
+**TTL:** 90 days (auto-deleted after expiration)
 
 **Archived When:** Games start (via `cleanupExpiredMemoryDecisions()` in agent.ts)
 
@@ -425,10 +544,9 @@ These collections mirror on-chain data, populated by cloud functions in `ospex-f
 |-------|------|-------------|
 | `archivedAt` | Timestamp | When the decision was archived |
 | `archiveReason` | string | Why it was archived (e.g., "cleanup_expired") |
+| `expiresAt` | Timestamp | TTL expiration time |
 
 **Written By:** `ospex-agent-server/src/services/memoryService.ts::replaceDecisions()`
-
-**Retention:** Permanent (recommended: 365 days TTL)
 
 **Important:** This collection preserves LLM reasoning that would otherwise be lost when active decisions are cleaned up.
 
@@ -476,46 +594,41 @@ These collections mirror on-chain data, populated by cloud functions in `ospex-f
 
 ---
 
-### `agentContextSnapshots`
+### `agentMemory`
 
-**Document Count:** 0
+**Status:** Deprecated - reads should migrate to `agentMeta` and `agentDecisions`
 
-**Status:** Empty, but TypeScript interfaces exist in `firebase.ts`
-
-**Purpose (intended):** Store "show your work" context (injuries, rosters) that agents considered
-
-**Recommendation:** Keep for future use, implement writes
+**Recommendation:** Complete migration and remove
 
 ---
 
-## Consolidation Recommendations
+## Consolidation Status
 
-### Phase 1: Naming Consolidation (Low Risk)
+### Phase 1: Naming Consolidation ✅ COMPLETED
 
-| Current | Proposed | Rationale |
-|---------|----------|-----------|
-| `michelleCalculations` | `agentCalculations` | Add `agentId` field, works for any agent |
-| `michelleDecisions` | Deprecate | Already captured in `agentDecisions` |
-| `michelleQuotes` | `agentQuotes` | Add `agentId` field for multi-agent future |
+The following collections have been successfully renamed to support multi-agent architecture:
 
-### Phase 2: Cleanup (Safe to Execute)
+| Old Name | New Name | Status |
+|----------|----------|--------|
+| `michelleCalculations` | `agentCalculations` | ✅ Migrated |
+| `michelleDecisions` | `agentDecisions` | ✅ Migrated |
+| `michelleQuotes` | `agentQuotes` | ✅ Migrated |
+
+All collections now include an `agentId` field to differentiate between agents (Market Maker Michelle, Degen Dan, etc.).
+
+### Phase 2: Cleanup (Pending)
 
 1. **Delete `agentMatchHistory`** - Empty, no usage
-2. **Migrate `agentMemory` reads to `agentMeta`** - Complete deprecation
-3. **Audit `speculations` collection** - Only 1 doc, appears orphaned
-
-### Phase 3: Multi-Agent Preparation
-
-Add `agentId` field to:
-- `michelleQuotes` → `agentQuotes`
-- `michelleCalculations` → `agentCalculations`
-- `usedFeeTxHashes` (already has wallet, may need agentId for agent-specific tracking)
+2. **Complete `agentMemory` deprecation** - Migrate remaining reads to `agentMeta`
+3. **Audit `speculations` collection** - Low usage, investigate if still needed
 
 ### Document ID Strategy
 
-Current deterministic IDs like `{agentId}_{jsonoddsId}_{market}` are good. Extend this pattern:
-- Quotes: `{agentId}_{quoteId}_{network}`
-- Calculations: `{agentId}_{calculationId}`
+Deterministic IDs are used throughout:
+- Agent Offers: `{agentId}_{jsonoddsId}_{market}`
+- Agent Meta: `{agentId}_{network}`
+- Quotes: `{quoteId}__{network}`
+- Calculations: `{calculationId}`
 
 ---
 
@@ -526,13 +639,15 @@ Current deterministic IDs like `{agentId}_{jsonoddsId}_{market}` are good. Exten
 Collections that might migrate to Supabase:
 - `agent_interests` - Analytical data, benefits from SQL queries
 - `agentDecisions` - Historical data, good for analytics
+- `positionEvaluations` - Audit trail data, good for analytics
 - Archive collections - Large historical datasets
 
 Collections to keep in Firestore:
 - `agentOffers` - Needs real-time listeners for frontend
-- `michelleQuotes` - Real-time progress updates
+- `agentQuotes` - Real-time progress updates for instant match UI
 - `usedFeeTxHashes` - Security-critical, fast lookups
 - On-chain synced collections - Event-driven updates
+- `insights` - Real-time updates for insights features
 
 ### Backwards Compatibility
 
@@ -564,4 +679,4 @@ Outputs:
 ---
 
 *Document maintained by: Development Team*
-*See also: milestone-034 for context on this documentation effort*
+*Last major update: January 31, 2026 - Renamed michelle* collections to agent* pattern, added leaderboard and evaluation collections*
