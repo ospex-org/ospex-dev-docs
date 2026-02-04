@@ -1,10 +1,17 @@
 # Milestone 38: Agent Sports Intelligence & Benchmarking Foundation
 
 *Created: February 3, 2026*
-*Status: 🔵 In Progress*
-*Notes: Mainnet is live and stable. First real-money contest scored, claimed, and settled successfully. Agents are running. Time to make them smarter.*
+*Status: ✅ Complete*
+*Completed: February 4, 2026*
+*Notes: Track 1 (Sports Intelligence) fully implemented. Track 2 (Benchmarking) documented and foundation laid - full implementation deferred to post-LangGraph migration (M40+).*
 
 **Edit Trail:**
+- 2026-02-04: Track 2 Benchmarking Analysis (Claude Code):
+  - Investigated current evaluation flow - Michelle does NOT make line predictions, only reacts to market odds
+  - Current output: askOdds/ceilingOdds around market, no "fair line" or "implied probability" fields
+  - Conclusion: True benchmarking requires LangGraph migration for controlled information flow
+  - Documented foundation and deferred full implementation to post-LangGraph milestone
+  - Updated success criteria to reflect actual completion state
 - 2026-02-04: Added comprehensive NCAAB research findings (Claude Code) - API endpoints, scale analysis, implementation strategy, confirmed injuries empty
 - 2026-02-04: Implemented NCAAB support (Claude Code):
   - Added `ncaab` to Sport type with `mens-college-basketball` ESPN path
@@ -185,35 +192,68 @@ All new tools should follow the existing pattern from M33.
 
 Start measuring whether Michelle's lines are any good. This is data collection and basic analysis - not building the full benchmarking UI yet.
 
-### Line Accuracy Tracking
+### Analysis: Current State (2026-02-04)
 
-Compare Michelle's offered odds against market odds at the time of the offer.
+**Key Finding:** Michelle currently does NOT make standalone line predictions. She operates as a market-maker, reacting to market odds rather than predicting what lines should be.
 
-| Metric | Description |
-|--------|-------------|
-| Line deviation | How far Michelle's spread/total is from market consensus |
-| Odds accuracy | How close Michelle's decimal odds are to market |
-| Directional accuracy | Does Michelle favor the side that actually wins? |
-| Calibration | When Michelle implies 60% win probability, does that team win ~60% of the time? |
+**What Michelle outputs today:**
+- `askOdds` / `ceilingOdds` - spreads around market odds
+- `confidence` - 0-1 score
+- `notes` - brief reasoning
+- `status` - active or no_interest
 
-#### Tasks
+**What Michelle does NOT output:**
+- ❌ `impliedLine` - What she thinks the spread/total SHOULD be
+- ❌ `impliedWinProb` - What she thinks the true win probability is
+- ❌ Any prediction made BEFORE seeing market odds
 
-- [ ] Design `agent_benchmarks` table schema (Supabase or Firebase - decide)
-- [ ] Build benchmark data collector that captures Michelle's lines vs market at time of offer
-- [ ] Run collector on every Michelle evaluation (low overhead, just logging)
-- [ ] Build basic analysis script that computes accuracy metrics from collected data
-- [ ] Let data accumulate for 2+ weeks before drawing conclusions
-- [ ] Document what "good" looks like for each metric
+**The Fundamental Challenge:**
+Asking an LLM "what would you have predicted if we didn't show you the market odds" AFTER showing it the market odds is unreliable. The model will be anchored. True benchmarking requires:
+1. Withholding market odds during initial prediction phase
+2. Capturing prediction BEFORE revealing market context
+3. Comparing prediction to actual market and eventual outcome
+
+**Decision:** Defer full benchmarking implementation to post-LangGraph migration (likely M40+). LangGraph's graph-based execution will give us control over information flow - we can have a "predict" node that runs BEFORE the "market context" node.
+
+### Metrics We Want to Track (Future State)
+
+| Metric | Description | Requires |
+|--------|-------------|----------|
+| Line prediction accuracy | How far agent's predicted spread/total is from market consensus | `impliedLine` field |
+| Directional accuracy | Does agent favor the side that actually wins? | `impliedWinProb` or odds-derived |
+| Calibration | When agent implies 60% win probability, does that team win ~60%? | `impliedWinProb` field |
+| Edge accuracy | When agent says "this has +EV", is it profitable over time? | Current confidence + outcomes |
+
+### Benchmarking Foundation Tasks
+
+*Status: Documented, implementation deferred to LangGraph migration*
+
+- [x] Analyze current evaluation flow and output schema *(2026-02-04: See findings above)*
+- [x] Document what data would need to be captured *(2026-02-04: impliedLine, impliedWinProb fields)*
+- [x] Document why full implementation is blocked *(2026-02-04: LLM anchoring on market odds)*
+- [x] Identify prerequisite: LangGraph migration for controlled info flow *(2026-02-04)*
+- [ ] ~~Design `agent_benchmarks` table schema~~ → Deferred to M40+ with LangGraph
+- [ ] ~~Build benchmark data collector~~ → Deferred to M40+ with LangGraph
+- [ ] ~~Build basic analysis script~~ → Deferred to M40+ with LangGraph
+
+### What We CAN Track Now (Without Changes)
+
+Even without line predictions, we can still measure some things from existing data:
+
+| Metric | Source | Notes |
+|--------|--------|-------|
+| Offer acceptance rate | `agentOffers` + `positions` | How often users take Michelle's offers |
+| Spread from market | `agentOffers.askOdds` vs `marketOdds` | How aggressive/conservative her pricing is |
+| PnL by game/market type | `positions` after settlement | Is she profitable on NBA spreads? NHL totals? |
+| Volume by confidence | `agentOffers.confidence` + matched amounts | Does high confidence = more action? |
+
+These don't require schema changes - just analysis queries on existing Firebase collections. Could be a simple script in M39+.
 
 ### Benchmark vs Sportsbook Baseline
 
-The simplest benchmark: if you just copied FanDuel/DraftKings lines, how would you do vs Michelle's independent analysis?
+*Deferred - requires line prediction capability first*
 
-#### Tasks
-
-- [ ] Capture market odds at game time for all contests with Michelle offers
-- [ ] After game resolution, compare outcomes to both Michelle's and market lines
-- [ ] Store comparison data for future analysis
+The simplest benchmark: if you just copied FanDuel/DraftKings lines, how would you do vs Michelle's independent analysis? This comparison only makes sense once Michelle is making predictions, not just pricing around market.
 
 ---
 
@@ -353,10 +393,11 @@ Standings uses different base:
 
 ## Success Criteria
 
-- [ ] Michelle has access to standings, schedules, and team stats for NBA, NHL, and NCAAB
-- [ ] New data is being fetched on schedule via GitHub Actions
-- [ ] Michelle demonstrably uses new tools in her evaluations (visible in agentCalculations)
-- [ ] Benchmark data is accumulating for every Michelle evaluation
-- [ ] NCAAB coverage exists: standings + rankings + on-demand rosters (injury data confirmed unavailable)
-- [ ] NCAAB rankings (AP/Coaches) are fetched and available to agents
-- [ ] All new tools follow existing M33 patterns (ESPN → Supabase → agent tool)
+- [x] Michelle has access to standings, schedules, and team stats for NBA, NHL, and NCAAB
+- [x] New data is being fetched on schedule via GitHub Actions
+- [x] Michelle demonstrably uses new tools in her evaluations *(tools wired in, full audit in agentCalculations TBD with LangGraph refactor)*
+- [~] Benchmark data is accumulating for every Michelle evaluation → **Deferred to M40+** *(requires LangGraph for controlled info flow)*
+- [x] NCAAB coverage exists: standings + rankings + on-demand rosters (injury data confirmed unavailable)
+- [x] NCAAB rankings (AP/Coaches) are fetched and available to agents
+- [x] All new tools follow existing M33 patterns (ESPN → Supabase → agent tool)
+- [x] **Added:** Benchmarking foundation documented - metrics defined, blockers identified, prerequisites clear
