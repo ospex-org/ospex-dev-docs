@@ -4,6 +4,23 @@
 *Status: 🔵 In Progress*
 *Notes: Mainnet is live and stable. First real-money contest scored, claimed, and settled successfully. Agents are running. Time to make them smarter.*
 
+**Edit Trail:**
+- 2026-02-04: Added comprehensive NCAAB research findings (Claude Code) - API endpoints, scale analysis, implementation strategy, confirmed injuries empty
+- 2026-02-04: Implemented NCAAB support (Claude Code):
+  - Added `ncaab` to Sport type with `mens-college-basketball` ESPN path
+  - Created `006_rankings.sql` migration for AP/Coaches Poll data
+  - Built `espn/rankings.ts` fetcher for NCAAB rankings
+  - Created `getRankings` tool for agents
+  - Updated fetcher.ts to exclude NCAAB from scheduled injury/roster/stats fetches
+  - Added SPORTS_WITH_INJURIES, SPORTS_WITH_SCHEDULED_FETCH, SPORTS_WITH_RANKINGS constants
+  - Added `--rankings` flag to fetchSportsData.ts for testing
+  - Added weekly rankings fetch to GitHub Actions (Mondays 15:00 UTC)
+  - Added `get_rankings` to progressCallback.ts (TOOL_TO_PROGRESS_STEP and TOOL_MESSAGES)
+  - Added `reviewing_rankings` case to MichelleEvaluationLog.tsx
+  - Updated Michelle's system prompt in gameEvaluator.ts with rankings tool
+  - Seeded 362 NCAAB teams into Supabase teams table
+  - Verified NCAAB standings fetch (362 teams) and rankings fetch (50 entries) working
+
 ---
 
 ## Overview
@@ -71,15 +88,83 @@ Extend the existing ESPN → Supabase pipeline to cover more data types across N
 - [x] Create `get_team_stats` tool for agent toolkit *(2026-02-03: Created tools/getTeamStats.ts)*
 - [x] Wire into Michelle's evaluation flow *(2026-02-03: Added to allTools, progressCallback, MichelleEvaluationLog.tsx, and system prompt)*
 
-### NCAAB Injury Coverage
+### NCAAB Coverage
 
-ESPN's NCAAB injury data is thin compared to NBA/NHL, but worth capturing what's available.
+*Research completed: 2026-02-04 by Claude Code*
 
-#### Tasks
+#### ESPN API Findings
 
-- [ ] Extend existing injury fetcher to include NCAAB sport ID
-- [ ] Test what ESPN actually returns for NCAAB injuries
-- [ ] If sparse, document the gap and move on (don't over-engineer)
+ESPN uses `mens-college-basketball` as the path segment (not NCAAB, NCAAM, or CBK). The league abbreviation in responses is `NCAAM`.
+
+**Working Endpoints:**
+
+| Endpoint | URL Pattern | Notes |
+|----------|-------------|-------|
+| Teams | `/apis/site/v2/sports/basketball/mens-college-basketball/teams?limit=400` | Returns 362 Division I teams |
+| Standings | `/apis/v2/sports/basketball/mens-college-basketball/standings` | 31 conferences, full standings with PPG, streak, conf rank |
+| Scoreboard | `/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?dates=YYYYMMDD&groups=50` | Need `groups=50` for Division I |
+| Rankings | `/apis/site/v2/sports/basketball/mens-college-basketball/rankings` | AP Top 25 & Coaches Poll with points, first-place votes |
+| Roster | `/apis/site/v2/sports/basketball/mens-college-basketball/teams/{teamId}/roster` | Per-team, same structure as NBA |
+| Team Stats | `/apis/site/v2/sports/basketball/mens-college-basketball/teams/{teamId}/statistics` | Per-team, FG%, 3P%, RPG, PPG |
+
+**Not Working / Sparse:**
+
+| Endpoint | Result | Decision |
+|----------|--------|----------|
+| Injuries | Returns `{"injuries": []}` - empty | **Skip.** ESPN doesn't track NCAAB injuries. Document the gap. |
+
+#### Scale Considerations
+
+**362 Division I teams** vs 30 NBA / 32 NHL - cannot use same "fetch all teams" approach.
+
+**Conference breakdown (31 conferences):**
+- Major conferences: ACC (18), Big Ten (18), Big 12 (16), SEC (16)
+- Mid-majors: A-10 (14), AAC (13), WCC (12), MVC (11), etc.
+
+**Rate limit concern:** Fetching roster/stats for all 362 teams would take ~40 minutes at 100ms rate limit.
+
+#### Implementation Strategy (Recommended)
+
+**Approach: On-Demand + Ranked Teams**
+
+1. **Teams table:** Don't seed 362 teams upfront
+   - Dynamically add teams to `teams` table when first encountered in a contest
+   - Pre-seed Top 25 ranked teams (fetched from rankings endpoint)
+
+2. **Standings:** ✅ Works with existing fetcher
+   - Single API call returns all conferences
+   - Extend `Sport` type to include `'ncaab'` with `mens-college-basketball` path
+
+3. **Rankings:** 🆕 New table/endpoint needed
+   - Critical for NCAAB (AP rank matters more than conference rank)
+   - Store AP rank, Coaches rank, points, first-place votes
+   - Update weekly (rankings change Mondays)
+
+4. **Injuries:** ❌ Skip - no data available
+   - Document gap, don't add NCAAB to injury fetch cycle
+
+5. **Rosters/Stats:** On-demand only
+   - Fetch when team is involved in an active contest
+   - Cache aggressively (rosters change rarely)
+   - Focus on ranked teams + active contest teams
+
+#### NCAAB-Specific Tasks
+
+- [x] Research ESPN API endpoints for NCAAB *(2026-02-04: Documented above)*
+- [x] Test injuries endpoint - confirmed empty *(2026-02-04: Returns `{"injuries": []}`)*
+- [x] Test standings endpoint - works *(2026-02-04: Returns 31 conferences, ~362 teams)*
+- [x] Test rankings endpoint - works *(2026-02-04: Returns AP Top 25 + Coaches Poll)*
+- [x] Test roster endpoint - works *(2026-02-04: Same structure as NBA, includes class year)*
+- [x] Test team stats endpoint - works *(2026-02-04: Same structure as NBA)*
+- [x] Add `ncaab` to `Sport` type in `types.ts` *(2026-02-04: Added with mens-college-basketball path)*
+- [x] Add NCAAB config to `SPORT_CONFIG` *(2026-02-04: Full config including null injuriesUrl)*
+- [x] Create `rankings` table migration *(2026-02-04: Created 006_rankings.sql)*
+- [x] Build rankings fetcher *(2026-02-04: Created espn/rankings.ts)*
+- [x] Create `get_rankings` tool for agents *(2026-02-04: Created tools/getRankings.ts, added to allTools)*
+- [x] Seed NCAAB teams into Supabase *(2026-02-04: Created seed-ncaab-teams.ts, seeded 362 teams)*
+- [x] Run 006_rankings.sql migration in Supabase *(2026-02-04: Migration ran successfully)*
+- [x] Test NCAAB standings fetch end-to-end *(2026-02-04: 362 standings stored)*
+- [x] Test NCAAB rankings fetch end-to-end *(2026-02-04: 50 rankings stored - AP Top 25 + Coaches Poll)*
 
 ### Tool Integration
 
@@ -90,9 +175,9 @@ All new tools should follow the existing pattern from M33.
 - [x] Review Michelle's current tool calling to understand integration points *(2026-02-03: Reviewed getInjuryReport.ts and allTools pattern)*
 - [x] Add new tools to agent toolkit registry *(2026-02-03: Added getStandingsTool to tools/index.ts allTools array)*
 - [x] Update Michelle's system prompt to reference new capabilities *(2026-02-03: Added get_standings to tools list and usage guidance)*
-- [ ] Test that Michelle actually uses the new tools in evaluations *(Pending: Need to test in prod)*
-- [ ] Verify tool outputs are showing up in `agentCalculations` for audit trail *(Pending: Need to test in prod)*
-- [ ] Run a few manual evaluations and review Michelle's reasoning with new data *(Pending: Need to test in prod)*
+- [x] Test that Michelle actually uses the new tools in evaluations *(uses tools but we'll need to refactor with LangGraph)*
+- [ ] Verify tool outputs are showing up in `agentCalculations` for audit trail *(might not need this in this collection)*
+- [ ] Run a few manual evaluations and review Michelle's reasoning with new data *(punting on this)*
 
 ---
 
@@ -185,12 +270,69 @@ team_stats
 
 ### GitHub Actions Schedule
 
-| Workflow | Frequency | Sports |
-|----------|-----------|--------|
-| fetch-injuries (existing) | Every hour | NBA, NHL, → add NCAAB |
-| fetch-standings (new) | Every 2 hours | NBA, NHL, NCAAB |
-| fetch-schedules (new) | Every 6 hours | NBA, NHL, NCAAB |
-| fetch-team-stats (new) | Every 6 hours | NBA, NHL, NCAAB |
+| Workflow | Frequency | Sports | Notes |
+|----------|-----------|--------|-------|
+| fetch-injuries | Every hour | NBA, NHL | NCAAB excluded - ESPN returns empty |
+| fetch-standings | Every 2 hours | NBA, NHL, NCAAB | NCAAB returns 31 conferences |
+| fetch-schedules | Every 6 hours | NBA, NHL, NCAAB | NCAAB needs `groups=50` param |
+| fetch-team-stats | Daily | NBA, NHL | NCAAB on-demand only (362 teams) |
+| fetch-rankings | Weekly (Mondays) | NCAAB | AP Top 25 + Coaches Poll |
+
+### NCAAB On-Demand Fetching Pattern
+
+*Documented: 2026-02-04*
+
+**CRITICAL DIFFERENCE FROM NBA/NHL:**
+
+NBA/NHL roster and stats are fetched on a cron schedule because there are only 30/32 teams.
+NCAAB has **362 Division I teams** - fetching all would take 40+ minutes and waste API calls for teams Michelle may never evaluate.
+
+**What runs on schedule:**
+| Data Type | NBA/NHL | NCAAB |
+|-----------|---------|-------|
+| Injuries | Every hour | **NEVER** (ESPN returns empty) |
+| Standings | Every 2 hours | Every 2 hours (single API call) |
+| Rosters | Daily | **ON-DEMAND ONLY** |
+| Team Stats | Daily | **ON-DEMAND ONLY** |
+| Rankings | N/A | Weekly (Mondays) |
+
+**On-demand pattern for NCAAB rosters/stats:**
+When a contest involves an NCAAB team:
+1. Check if team exists in `teams` table (if not, add it dynamically)
+2. Check if roster/stats are stale (older than threshold)
+3. If stale, fetch fresh data from ESPN for just that team
+4. Cache aggressively - college rosters rarely change mid-season
+
+**Code location:** This logic should be added to the slate evaluation flow or contest creation, NOT to the scheduled fetcher.
+
+### ESPN API Endpoint Patterns
+
+*Documented: 2026-02-04*
+
+```
+Base: https://site.api.espn.com/apis/site/v2/sports/{sport}/{league}
+
+NBA:
+  sport: basketball, league: nba
+
+NHL:
+  sport: hockey, league: nhl
+
+NCAAB:
+  sport: basketball, league: mens-college-basketball
+  ⚠️ Note: Use `mens-college-basketball` NOT ncaab/ncaam/cbk
+
+Common endpoints:
+  /injuries          - Injury reports (empty for NCAAB)
+  /teams             - All teams
+  /teams/{id}/roster - Team roster
+  /teams/{id}/statistics - Team stats
+  /scoreboard        - Games (add ?dates=YYYYMMDD)
+  /rankings          - Polls (NCAAB only)
+
+Standings uses different base:
+  https://site.api.espn.com/apis/v2/sports/{sport}/{league}/standings
+```
 
 ---
 
@@ -215,5 +357,6 @@ team_stats
 - [ ] New data is being fetched on schedule via GitHub Actions
 - [ ] Michelle demonstrably uses new tools in her evaluations (visible in agentCalculations)
 - [ ] Benchmark data is accumulating for every Michelle evaluation
-- [ ] NCAAB coverage exists (even if injury data is thin)
+- [ ] NCAAB coverage exists: standings + rankings + on-demand rosters (injury data confirmed unavailable)
+- [ ] NCAAB rankings (AP/Coaches) are fetched and available to agents
 - [ ] All new tools follow existing M33 patterns (ESPN → Supabase → agent tool)
