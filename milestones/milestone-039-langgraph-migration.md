@@ -4,6 +4,33 @@
 *Status: 🔄 Track 4 In Progress*
 
 **Edit Trail:**
+- 2026-02-07: **CRITICAL FIX - Removed old LangChain code causing token burn**:
+  - **Root Cause**: Old LangChain code (`evaluator.ts` → `runSmartReEvaluation()`) was running BEFORE the new LangGraph slate orchestrator. Michelle was in the `agents` array in `agents.json`, causing the scheduler to run her old evaluation code on boot.
+  - **Files Deleted**: `evaluator.ts`, `reevaluationScheduler.ts`, `run-michelle.ts`, `run-michelle-fresh.ts`, `test-michelle.ts`
+  - **Config Updated**: Removed Michelle from `agents` array (she remains in `marketMakerMatching.agents` only)
+  - **Result**: Now only LangGraph code runs for Michelle - no more fallback/dual execution
+- 2026-02-07: **Game Evaluation Persistence Service**:
+  - Created `gameEvaluationService.ts` - persists LLM-generated predictions to Firebase
+  - New collection: `agentGameEvaluations` with structure:
+    - `blindPrediction`: Michelle's pre-market predictions (spread, total, moneyline with confidence/reasoning)
+    - `marketPricing`: Post-market pricing (askOdds, ceilingOdds, edgeAssessment)
+  - Wired into `integration.ts`: All 3 invoke functions now save evaluations to Firebase
+  - Purpose: Frontend display of Michelle's thinking, benchmarking, analytics
+- 2026-02-07: **Frontend Progress Streaming Implementation**:
+  - Added node-level progress emission to `nodes.ts`:
+    - `blind_prediction` - "Analyzing the game..." (at node start)
+    - `market_pricing` - "Generating pricing..." (at node start)
+    - `price_response` - "Making my decision..." (at node start)
+    - `blind_prediction_complete` - "My independent assessment is ready" (with prediction details)
+  - Added `get_odds_history` tool mapping to `progressCallback.ts`:
+    - Maps to `reviewing_odds_history` step
+    - Extracts line movement details (e.g., "Spread: Opened -3.5, now -5.5 (↓-2.0)")
+  - Added `get_rankings` detail extraction for NCAAB AP/Coaches polls
+  - Added new progress step definitions to `quoteProgressService.ts`
+  - Added frontend formatters in `MichelleEvaluationLog.tsx`:
+    - `reviewing_odds_history` - displays line movement
+    - `blind_prediction_complete` - displays Michelle's prediction (spread/total/win%/reasoning)
+  - **Remaining:** Frontend testing to verify progress displays correctly
 - 2026-02-07: **Track 4 End-to-End Test PASSED** - Full verification:
   - Test run: 2 NBA games (WSH @ BKN, HOU @ OKC), both triaged as high interest, both dispatched
   - Blind prediction: Tools returned real data (injuries, standings, schedule, stats)
@@ -691,9 +718,11 @@ Wire the new graph into the existing agent server and ensure all existing flows 
 | `scheduler.ts` | Added slate orchestrator invocation, LangSmith status logging |
 | `slateNodes.ts` | Dispatch node invokes per-game graphs |
 | `matching-job.ts` | Added LangGraph evaluation path for unmatched pairs |
-| `quoteProgressService.ts` | Added LangGraph progress messages |
-| `progressCallback.ts` | Updated docs for LangGraph architecture |
+| `quoteProgressService.ts` | Added LangGraph progress messages, new step definitions (reviewing_odds_history, reviewing_rankings, blind_prediction_complete) |
+| `progressCallback.ts` | Updated docs for LangGraph architecture, added get_odds_history/get_rankings tool mappings and detail extractors |
+| `nodes.ts` | Added node-level progress emission (blind_prediction, market_pricing, price_response, blind_prediction_complete) |
 | `index.ts` | Added integration layer exports |
+| `MichelleEvaluationLog.tsx` (frontend) | Added formatters for reviewing_odds_history and blind_prediction_complete |
 
 ### Instant Match Flow (Updated)
 
@@ -735,9 +764,15 @@ POST /api/michelle/counter-accept  →  Accept counter (unchanged)
 
 ### Regression Checks
 
+> **Status:** Code complete. Awaiting frontend testing to verify progress streaming displays correctly.
+
 - [ ] Frontend instant match UX unchanged (user sees same flow)
 - [ ] Firebase progress streaming works during graph execution
-- [ ] Progress messages correctly reflect graph state (cache hits show "Found evaluation...", fresh evals show tool-by-tool progress)
+- [ ] Progress messages correctly reflect graph state:
+  - [ ] Node-level steps display: "Analyzing the game...", "Generating pricing...", "Making my decision..."
+  - [ ] Cache hits show "Found evaluation from X minutes ago..."
+  - [ ] Tool details expand correctly (injuries, standings, line movement, etc.)
+  - [ ] Blind prediction summary shows (spread/total/win%/reasoning)
 - [ ] On-chain transactions still execute correctly
 - [ ] Agent offers appear correctly in UI
 - [ ] Leaderboard data unaffected
