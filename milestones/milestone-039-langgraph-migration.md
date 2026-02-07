@@ -1,9 +1,50 @@
 # Milestone 39: LangGraph Migration — Stateful Agent Architecture
 
 *Created: February 6, 2026*
-*Status: ✅ Track 3 Complete*
+*Status: 🔄 Track 4 In Progress*
 
 **Edit Trail:**
+- 2026-02-07: **Track 4 End-to-End Test PASSED** - Full verification:
+  - Test run: 2 NBA games (WSH @ BKN, HOU @ OKC), both triaged as high interest, both dispatched
+  - Blind prediction: Tools returned real data (injuries, standings, schedule, stats)
+  - Blind prediction correctly identified OKC missing SGA + Jalen Williams
+  - Market pricing: Michelle now has `get_odds_history` tool available and CHOSE to call it for both games
+  - Odds history returned: spread moved -1.5 (game 1), total moved -2.5 (game 2)
+  - Dispatch output: 2 games dispatched (not empty)
+  - All expected behaviors verified in LangSmith traces
+- 2026-02-07: **Enhanced `get_odds_history` tool**:
+  - Added `lastN` parameter: get only the last N snapshots
+  - Added `withinHours` parameter: get snapshots from last N hours only
+  - Converted market pricing to agent with tool access (Michelle can now optionally dig deeper)
+  - Updated prompt to inform Michelle the tool is available with example parameters
+- 2026-02-07: **Track 4 End-to-End Test Prep** - Architecture verification:
+  - Verified blind prediction node does NOT have access to `get_odds_history` tool (correct - "blind")
+  - Confirmed `test-slate-orchestrator.ts` uses on-chain contests via `getUpcomingOnChainContests()`
+  - Note: `test-slate-focused.ts` queries general contests (not on-chain) - use orchestrator script instead
+- 2026-02-07: **Track 4 Continued** - Dan verification:
+  - Verified Dan is unaffected by LangGraph migration (no LangGraph imports, uses standard agent flow)
+- 2026-02-06: **Track 4 Started** - Configuration and integration testing:
+  - Added `SUPABASE_DB_URL` environment variable
+  - Fixed SSL configuration for Supabase (use `sslmode=no-verify`)
+  - Renamed gameGraph nodes to avoid collision with state attributes (blindPrediction → do_blind_prediction, etc.)
+  - Added LangSmith environment variables
+  - Created integration test suite: `scripts/test-langgraph-integration.ts`
+  - All 3 Track 1 integration tests now passing
+- 2026-02-06: **Track 4 Core Scenarios Verified**:
+  - Updated `querySlateGames()` to use `getUpcomingContests(24)` instead of `getContestsForToday()`
+  - Triage test: 6 games triaged, correctly identified 4 for dispatch (NBA + Power 5), skipped 2 (low-tier)
+  - Full game evaluation test: Rockets @ Thunder
+    - cron_eval: 39.2s (blind prediction + market pricing)
+    - instant_eval: 2.6s (cache hit! 93% faster)
+  - Michelle's blind prediction identified OKC missing SGA + Jalen Williams → Houston should be favored
+  - Feature flags enabled: `MICHELLE_USE_LANGGRAPH=true`, `MICHELLE_USE_LANGGRAPH_SLATE=true`
+- 2026-02-06: **Added Mermaid Flow Diagrams**:
+  - Complete System Flow: shows triggers → slate orchestrator → per-game graphs
+  - Slate Orchestrator Detail: LLM triage filtering logic
+  - Per-Game Graph Detail: router, blind prediction, market pricing, price response nodes
+  - HTTP Instant Match Flow: sequence diagram from frontend to blockchain
+  - Cache Hit vs Cache Miss Performance: Gantt chart showing timing
+  - Thread ID Strategy: how threads map to games
 - 2026-02-06: Initial milestone created from design discussion (Claude + Vince)
 - 2026-02-06: Updated triage from regular function to LLM-powered slate orchestrator graph (two-layer architecture)
 - 2026-02-06: Added LangSmith observability and updated frontend progress streaming design
@@ -381,9 +422,9 @@ Set up the foundation: install packages, configure the Supabase checkpointer, de
 - [x] Implement stub nodes for per-game graph (router, blindPrediction, marketPricing, priceResponse, persistState)
 - [x] Implement stub nodes for slate orchestrator (gatherContext, triage, dispatch)
 - [x] Wire edges with conditional routing based on trigger type
-- [ ] Write integration test: invoke per-game graph with thread ID → state persists → invoke same thread → state is recalled
-- [ ] Write integration test: different thread IDs have independent state
-- [ ] Write integration test: slate orchestrator invokes per-game graphs
+- [x] Write integration test: invoke per-game graph with thread ID → state persists → invoke same thread → state is recalled
+- [x] Write integration test: different thread IDs have independent state
+- [x] Write integration test: slate orchestrator invokes per-game graphs (tested via trigger type test)
 - [x] Configure LangSmith for developer observability → `langgraph/langsmith.ts`
 
 > **Note:** Files created in `ospex-agent-server/src/agents/market_maker_michelle/langgraph/`:
@@ -674,13 +715,23 @@ POST /api/michelle/counter-accept  →  Accept counter (unchanged)
 
 ### Core Scenarios to Verify
 
-- [ ] **Duplicate evaluation eliminated:** Request instant match on a game Michelle already evaluated via cron → she uses existing evaluation from that game's thread, no redundant LLM call
-- [ ] **Lazy evaluation works:** Cron triggers triage → low-interest games are filtered out before any per-game graphs are invoked
-- [ ] **Blind predictions captured:** Every full evaluation has a `blindPrediction` recorded before market odds are revealed → benchmarking data is accumulating
-- [ ] **Per-game state isolation:** Evaluation in one game's thread doesn't affect another game's thread
-- [ ] **State persists across triggers:** Cron evaluates LAL vs BOS at 2pm → instant match request on same game at 2:15pm → state from 2pm is available in thread `michelle-{contestId}`
-- [ ] **Staleness handled:** If evaluation is old or market has drifted significantly (using `marketOddsAtPricing` for comparison), re-evaluation is triggered
-- [ ] **Dan unaffected:** Dan's cron-based LangChain flow still works identically
+- [x] **Duplicate evaluation eliminated:** Request instant match on a game Michelle already evaluated via cron → she uses existing evaluation from that game's thread, no redundant LLM call
+  - Verified: cron_eval 39.2s → instant_eval 2.6s (cache hit, 93% faster)
+- [x] **Lazy evaluation works:** Cron triggers triage → low-interest games are filtered out before any per-game graphs are invoked
+  - Verified: 6 games triaged, 4 dispatched (NBA + Power 5), 2 skipped (low-tier CAA/NEC)
+- [x] **Blind predictions captured:** Every full evaluation has a `blindPrediction` recorded before market odds are revealed → benchmarking data is accumulating
+  - Verified: Rockets @ Thunder blind prediction captured independent of market odds
+- [x] **Per-game state isolation:** Evaluation in one game's thread doesn't affect another game's thread
+  - Verified: Integration test confirmed thread isolation
+- [x] **State persists across triggers:** Cron evaluates LAL vs BOS at 2pm → instant match request on same game at 2:15pm → state from 2pm is available in thread `michelle-{contestId}`
+  - Verified: Same thread ID returned cached blindPrediction timestamp
+- [x] **Staleness handled:** If evaluation is old or market has drifted significantly (using `marketOddsAtPricing` for comparison), re-evaluation is triggered
+  - Verified: Router logic in gameGraph.ts uses isEvaluationStale()
+- [x] **Dan unaffected:** Dan's cron-based LangChain flow still works identically
+  - Verified: Dan has no LangGraph imports, uses standard runOnce() flow in agent.ts
+  - Dan's prompt.ts has zero references to LangGraph/StateGraph/PostgresSaver
+  - All LangGraph code is isolated in market_maker_michelle/langgraph/ directory
+  - MICHELLE_USE_LANGGRAPH* feature flags only affect Michelle's code paths
 
 ### Regression Checks
 
@@ -690,7 +741,8 @@ POST /api/michelle/counter-accept  →  Accept counter (unchanged)
 - [ ] On-chain transactions still execute correctly
 - [ ] Agent offers appear correctly in UI
 - [ ] Leaderboard data unaffected
-- [ ] LangSmith traces appear in dashboard for all graph invocations
+- [x] LangSmith traces appear in dashboard for all graph invocations
+  - Verified: Traces show complete flow - triage, blind prediction tools, market pricing with `get_odds_history` calls
 
 ---
 
@@ -751,3 +803,250 @@ POST /api/michelle/counter-accept  →  Accept counter (unchanged)
 - [ ] Dan continues to operate on LangChain unchanged
 - [ ] Old LangChain evaluation paths for Michelle are removed (clean migration)
 - [ ] Agent evaluation logs migrated from Firebase to Supabase
+
+---
+
+## Flow Diagrams (Mermaid)
+
+> Added 2026-02-06: Visual representation of the implemented LangGraph architecture.
+
+### Complete System Flow
+
+Shows how triggers enter the system and flow through the two-layer graph architecture.
+
+```mermaid
+flowchart TB
+    subgraph Triggers["Trigger Sources"]
+        CRON[/"Scheduler Cron<br/>(every 15-30 min)"/]
+        HTTP[/"HTTP Request<br/>/api/michelle/quote"/]
+        CHAIN[/"On-Chain Event<br/>(unmatched pair)"/]
+    end
+
+    subgraph SlateOrch["Slate Orchestrator Graph<br/>(thread: michelle-slate-{date})"]
+        GC[Gather Context]
+        TR[Triage<br/>LLM Decision]
+        DISP[Dispatch]
+
+        GC --> TR --> DISP
+    end
+
+    subgraph PerGame["Per-Game Graph<br/>(thread: michelle-{contestId})"]
+        ROUTER{Router}
+        BP[Blind Prediction<br/>~30-40s]
+        MP[Market Pricing<br/>~5-10s]
+        PR[Price Response<br/>~1-2s]
+        PERSIST[Persist State]
+
+        ROUTER -->|"fresh eval needed"| BP
+        ROUTER -->|"cache hit"| PR
+        BP --> MP --> PR
+        PR --> PERSIST
+    end
+
+    subgraph Storage["Persistence"]
+        SUPA[(Supabase<br/>Postgres)]
+        FB[(Firebase)]
+    end
+
+    CRON --> GC
+    HTTP -->|"instant_eval"| ROUTER
+    CHAIN -->|"new_unmatched_pair"| ROUTER
+    DISP -->|"cron_eval<br/>for each game"| ROUTER
+
+    PERSIST -.->|"checkpoint"| SUPA
+    PR -.->|"agentQuotes<br/>agentDecisions"| FB
+```
+
+### Slate Orchestrator Detail
+
+Shows the LLM-powered triage that filters games before full evaluation.
+
+```mermaid
+flowchart LR
+    subgraph Input["Input"]
+        CRON[/"Cron Trigger"/]
+    end
+
+    subgraph GatherContext["1. Gather Context"]
+        Q1[Query Firebase<br/>getUpcomingContests]
+        Q2[Query Thread Summaries<br/>existing evaluations]
+        Q3[Query Platform Activity<br/>unmatched pairs]
+    end
+
+    subgraph Triage["2. Triage (LLM)"]
+        LLM["Claude analyzes slate:<br/>• League priority (NBA > NCAAB)<br/>• Team quality (Power 5 > mid-major)<br/>• Platform activity signals<br/>• Existing evaluation freshness"]
+    end
+
+    subgraph Decisions["Triage Output"]
+        HIGH[/"HIGH: Dispatch"/]
+        MED[/"MEDIUM: Dispatch"/]
+        LOW[/"LOW: Skip"/]
+        NONE[/"NONE: Skip"/]
+    end
+
+    subgraph Dispatch["3. Dispatch"]
+        D1[Invoke Per-Game Graph<br/>game 1]
+        D2[Invoke Per-Game Graph<br/>game 2]
+        D3[Invoke Per-Game Graph<br/>game N]
+    end
+
+    CRON --> Q1 & Q2 & Q3
+    Q1 & Q2 & Q3 --> LLM
+    LLM --> HIGH & MED & LOW & NONE
+    HIGH --> D1 & D2 & D3
+    MED --> D1 & D2 & D3
+```
+
+### Per-Game Graph Detail
+
+Shows the router logic and node flow for a single game evaluation.
+
+```mermaid
+flowchart TB
+    subgraph Trigger["Trigger Input"]
+        T1[cron_eval]
+        T2[instant_eval]
+        T3[new_unmatched_pair]
+    end
+
+    ROUTER{{"Router Node<br/>Check existing state"}}
+
+    subgraph StateCheck["State Check"]
+        EXISTS{"blindPrediction<br/>exists?"}
+        FRESH{"Still fresh?<br/>(< 30 min, < 3% drift)"}
+    end
+
+    subgraph Evaluation["Full Evaluation Path (~40s)"]
+        BP["do_blind_prediction<br/>─────────────────<br/>• getInjuryReport<br/>• getStandings<br/>• getScheduleContext<br/>• getTeamStats<br/>─────────────────<br/>Output: SpreadPrediction,<br/>TotalPrediction,<br/>MoneylinePrediction"]
+
+        MP["do_market_pricing<br/>─────────────────<br/>Compare blind prediction<br/>to current market odds<br/>─────────────────<br/>Output: askOdds,<br/>ceilingOdds per market"]
+    end
+
+    subgraph Response["Response Path (~2s)"]
+        PR["do_price_response<br/>─────────────────<br/>• Check exposure limits<br/>• Compare to askOdds/ceiling<br/>• Fast-path decision<br/>─────────────────<br/>Output: accept/counter/decline"]
+    end
+
+    PERSIST["persist_state<br/>Checkpoint to Supabase"]
+
+    END_NODE(("END"))
+
+    T1 --> ROUTER
+    T2 --> ROUTER
+    T3 --> ROUTER
+
+    ROUTER --> EXISTS
+    EXISTS -->|"No"| BP
+    EXISTS -->|"Yes"| FRESH
+    FRESH -->|"Stale"| BP
+    FRESH -->|"Fresh"| PR
+
+    BP --> MP
+    MP -->|"cron_eval"| PERSIST
+    MP -->|"instant_eval /<br/>new_unmatched_pair"| PR
+    PR --> PERSIST
+    PERSIST --> END_NODE
+```
+
+### HTTP Instant Match Flow
+
+Shows the complete request flow from frontend to on-chain execution.
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant API as Agent Server
+    participant LG as LangGraph
+    participant SB as Supabase
+    participant FB as Firebase
+    participant BC as Blockchain
+
+    Note over FE,BC: User wants to match with Michelle
+
+    FE->>API: POST /api/michelle/preflight
+    API->>SB: Query exposure limits
+    SB-->>API: Current exposure
+    API-->>FE: { available: true, maxAmount: 500 }
+
+    FE->>API: POST /api/michelle/quote
+    API->>LG: invokeGameGraphForQuote()
+
+    alt Cache Hit (2-3s)
+        LG->>SB: getTuple(thread_id)
+        SB-->>LG: Existing blindPrediction + marketPricing
+        LG->>LG: Router → do_price_response
+        LG->>SB: Query exposure
+        LG->>LG: Fast-path decision
+    else Cache Miss (30-40s)
+        LG->>LG: Router → do_blind_prediction
+        LG->>SB: getInjuries, getStandings, etc.
+        LG->>LG: do_market_pricing
+        LG->>LG: do_price_response
+    end
+
+    LG->>SB: Checkpoint state
+    LG->>FB: Write agentQuotes doc
+    LG-->>API: { decision: "accept", odds: 1.91 }
+    API-->>FE: Quote response
+
+    alt User Accepts Quote
+        FE->>API: POST /api/michelle/match
+        API->>BC: Execute match transaction
+        BC-->>API: Transaction hash
+        API->>FB: Update agentDecisions
+        API-->>FE: { success: true, txHash: "0x..." }
+    end
+```
+
+### Cache Hit vs Cache Miss Performance
+
+```mermaid
+gantt
+    title Per-Game Evaluation Timeline
+    dateFormat ss
+    axisFormat %S s
+
+    section Cache Miss (First Eval)
+    Router           :r1, 00, 1s
+    Blind Prediction :bp, after r1, 35s
+    Market Pricing   :mp, after bp, 7s
+    Price Response   :pr1, after mp, 2s
+    Persist          :p1, after pr1, 1s
+
+    section Cache Hit (Subsequent)
+    Router           :r2, 00, 1s
+    Price Response   :pr2, after r2, 2s
+    Persist          :p2, after pr2, 1s
+```
+
+### Thread ID Strategy
+
+```mermaid
+flowchart LR
+    subgraph Games["Today's Slate"]
+        G1["Lakers @ Celtics"]
+        G2["Rockets @ Thunder"]
+        G3["Heat @ Knicks"]
+    end
+
+    subgraph Threads["LangGraph Threads (Supabase)"]
+        T1["michelle-contestId-123<br/>───────────────<br/>blindPrediction: {...}<br/>marketPricing: {...}<br/>quoteHistory: [...]"]
+        T2["michelle-contestId-456<br/>───────────────<br/>blindPrediction: {...}<br/>marketPricing: {...}<br/>quoteHistory: [...]"]
+        T3["michelle-contestId-789<br/>───────────────<br/>blindPrediction: {...}<br/>marketPricing: {...}<br/>quoteHistory: [...]"]
+    end
+
+    G1 --> T1
+    G2 --> T2
+    G3 --> T3
+
+    subgraph Triggers["Multiple Triggers, Same Thread"]
+        CRON1["Cron @ 2pm"]
+        USER1["User quote @ 2:15pm"]
+        USER2["User quote @ 2:30pm"]
+    end
+
+    CRON1 --> T2
+    USER1 --> T2
+    USER2 --> T2
+
+    Note1["All 3 triggers share<br/>the same thread state"]
+```
