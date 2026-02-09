@@ -4,6 +4,27 @@
 *Status: 🔄 Track 4 In Progress*
 
 **Edit Trail:**
+- 2026-02-08: **Removed old LangChain evaluation code paths for Michelle**:
+  - **Context**: LangGraph is now the only evaluation path for Michelle - feature flags allowed gradual migration, now complete
+  - **Files Deleted**:
+    - `langchain/index.ts` - LangChain agent exports
+    - `langchain/types.ts` - LangChain-specific types
+    - `langchain/michelleAgent.ts` - Old LangChain agent implementation
+    - `langchain/gameEvaluator.ts` - Old game evaluation logic
+  - **Files Moved**:
+    - `langchain/progressCallback.ts` → `market_maker_michelle/progressCallback.ts` (shared by LangGraph)
+  - **Files Updated**:
+    - `langgraph/nodes.ts` - Updated import path for progressCallback
+    - `langgraph/integration.ts` - Updated import path for progressCallback
+    - `http/michelleInstantMatch.ts`:
+      - Removed LangChain imports (gameEvaluator, langchain index)
+      - Removed `evaluateWithLangChainAgent()` function
+      - Removed `useLangGraphForEvaluation()` feature flag function
+      - Simplified conditionals to use only LangGraph path
+      - Renamed `LangChainEvalResult` to `EvalResult`
+      - Updated comments to reflect LangGraph-only architecture
+  - **Directory Removed**: `langchain/` (now empty)
+  - **Feature flag**: `MICHELLE_USE_LANGGRAPH` env var kept but unused (allows re-adding old code from git if needed)
 - 2026-02-07: **CRITICAL FIX - Removed old LangChain code causing token burn**:
   - **Root Cause**: Old LangChain code (`evaluator.ts` → `runSmartReEvaluation()`) was running BEFORE the new LangGraph slate orchestrator. Michelle was in the `agents` array in `agents.json`, causing the scheduler to run her old evaluation code on boot.
   - **Files Deleted**: `evaluator.ts`, `reevaluationScheduler.ts`, `run-michelle.ts`, `run-michelle-fresh.ts`, `test-michelle.ts`
@@ -694,11 +715,11 @@ Wire the new graph into the existing agent server and ensure all existing flows 
 - [x] Configure LangSmith environment variables on agent server (developer observability)
   - LangSmith status logged on startup when LangGraph is enabled
   - Env vars: `LANGCHAIN_TRACING_V2`, `LANGCHAIN_API_KEY`, `LANGCHAIN_PROJECT`
-- [ ] Migrate agent evaluation logs from Firebase to Supabase (deferred to Track 4)
-  - [ ] Design `agent_evaluation_logs` table
-  - [ ] Write evaluation audit trail to Supabase instead of Firebase agentCalculations
-  - [ ] Keep Firebase agentQuoteProgress for real-time UI streaming
-- [ ] Remove old LangChain evaluation code paths for Michelle (deferred - feature flags allow gradual migration)
+- [ ] Migrate agent evaluation logs from Firebase to Supabase (deferred)
+  - [ ] Design `agent_evaluation_logs` table (deferred)
+  - [ ] Write evaluation audit trail to Supabase instead of Firebase agentCalculations (deferred)
+  - [ ] Keep Firebase agentQuoteProgress for real-time UI streaming (deferred)
+- [x] Remove old LangChain evaluation code paths for Michelle (completed 2026-02-08)
 - [x] Verify Dan continues to work unchanged on LangChain (no changes to Dan's code paths)
 
 ### Feature Flags
@@ -766,16 +787,16 @@ POST /api/michelle/counter-accept  →  Accept counter (unchanged)
 
 > **Status:** Code complete. Awaiting frontend testing to verify progress streaming displays correctly.
 
-- [ ] Frontend instant match UX unchanged (user sees same flow)
-- [ ] Firebase progress streaming works during graph execution
-- [ ] Progress messages correctly reflect graph state:
-  - [ ] Node-level steps display: "Analyzing the game...", "Generating pricing...", "Making my decision..."
-  - [ ] Cache hits show "Found evaluation from X minutes ago..."
-  - [ ] Tool details expand correctly (injuries, standings, line movement, etc.)
-  - [ ] Blind prediction summary shows (spread/total/win%/reasoning)
-- [ ] On-chain transactions still execute correctly
-- [ ] Agent offers appear correctly in UI
-- [ ] Leaderboard data unaffected
+- [x] Frontend instant match UX unchanged (user sees same flow)
+- [x] Firebase progress streaming works during graph execution
+- [x] Progress messages correctly reflect graph state:
+  - [x] Node-level steps display: "Analyzing the game...", "Generating pricing...", "Making my decision..."
+  - [x] Cache hits show "Found evaluation from X minutes ago..."
+  - [x] Tool details expand correctly (injuries, standings, line movement, etc.)
+  - [ ] Blind prediction summary shows (spread/total/win%/reasoning) (did not see this, will keep an eye out for it in future testing runs)
+- [x] On-chain transactions still execute correctly
+- [ ] Agent offers appear correctly in UI (some inconsistencies which will require further testing)
+- [x] Leaderboard data unaffected
 - [x] LangSmith traces appear in dashboard for all graph invocations
   - Verified: Traces show complete flow - triage, blind prediction tools, market pricing with `get_odds_history` calls
 
@@ -831,13 +852,13 @@ POST /api/michelle/counter-accept  →  Accept counter (unchanged)
 - [ ] Lazy evaluation implemented (triage filters out low-interest games; can override based on platform signals)
 - [ ] Blind predictions captured before market odds are revealed (benchmarking unblocked)
 - [ ] All three trigger types work: cron (via slate orchestrator), instant eval request, new unmatched pair
-- [ ] Frontend progress streaming updated to reflect graph node structure (shows cache hits, nested tool calls)
-- [ ] LangSmith tracing enabled for developer observability
-- [ ] Frontend instant match flow is unchanged from user perspective
-- [ ] Firebase real-time UI updates still function
-- [ ] Dan continues to operate on LangChain unchanged
-- [ ] Old LangChain evaluation paths for Michelle are removed (clean migration)
-- [ ] Agent evaluation logs migrated from Firebase to Supabase
+- [x] Frontend progress streaming updated to reflect graph node structure (shows cache hits, nested tool calls)
+- [x] LangSmith tracing enabled for developer observability
+- [x] Frontend instant match flow is unchanged from user perspective
+- [x] Firebase real-time UI updates still function
+- [x] Dan continues to operate on LangChain unchanged
+- [x] Old LangChain evaluation paths for Michelle are removed (clean migration)
+- [ ] Agent evaluation logs migrated from Firebase to Supabase (deferred)
 
 ---
 
