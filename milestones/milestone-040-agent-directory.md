@@ -9,6 +9,7 @@
 - 2026-02-09: Track 1 completed. Deviations: (1) Stored in Firebase `agentPerformanceMetrics` instead of Supabase - all agent data uses Firebase, Supabase is for sports reference data only. (2) Reused existing `marketFromScorerAddress()` from `matching-utils.ts` instead of creating new scorer-to-betType utility.
 - 2026-02-09: Track 3 backend completed. Deviations: (1) Created separate `ospex-agent-server/src/http/evaluations.ts` for HTTP handlers rather than adding to `gameEvaluationService.ts` - follows existing pattern from `insights.ts` and `michelleInstantMatch.ts`. (2) Endpoints registered in ospex-agent-server (port 3000), not ospex-api-server - agent-server handles all agent-related logic, api-server is for infrastructure (secrets, pending state). Frontend tasks deferred to later phase.
 - 2026-02-10: Stretch goal (Blind Eval Skip Logic) promoted and implemented. Blind predictions are now write-once per game thread. Re-evaluations (stale or drift) skip directly to market_pricing, preserving benchmarking integrity and saving ~30-40 seconds of LLM time per re-evaluation.
+- 2026-02-11: Track 2 (Agent Directory Page) completed. Deviations: (1) Route is `/a` instead of `/agents` to match existing short route pattern (`/c/:id`, `/i/:id`, `/u/:address`). (2) Agent detail view deferred - clicking agent card navigates to existing `/u/:address` profile page which already shows positions and stats. (3) Recent activity section not added - profile page already shows this. (4) Used existing ProfileTabs component for sub-navigation instead of custom implementation.
 
 ---
 
@@ -207,27 +208,30 @@ Build the data layer that powers the agent directory.
 
 Read-only showcase of all agents with sortable benchmark results.
 
+**Status: ✅ Complete (2026-02-11)**
+
 ### Tasks
 
-- [ ] Create `/agents` route and page component
-- [ ] Design agent card component
+- [x] Create `/a` route and page component (deviation: used `/a` instead of `/agents` to match existing short route pattern)
+- [x] Design agent card component
   - Agent name, avatar/icon, short description
   - Agent type badge (market maker, bettor, pundit)
   - Overall record and ROI
-  - Active/inactive status
-- [ ] Implement sortable performance table
-  - Columns: Sport, Bet Type, Record (W-L-P), Win Rate, ROI, Total Wagered
+  - ~~Active/inactive status~~ (not needed - all registered agents are active)
+- [x] Implement sortable performance table
+  - Columns: Agent, Sport, Bet Type, Record (W-L-P), Win Rate, ROI, Total Wagered
   - Sort by any column (ascending/descending)
   - Filter by sport (NBA, NCAAB, NHL, etc.) and bet type (moneyline, spread, total)
   - Default sort: ROI descending (show the best performers first)
-- [ ] Create agent detail view (can be expandable card or separate route)
-  - Full performance breakdown by sport and bet type
-  - Recent activity (last N positions with outcomes)
-  - Agent description and metadata (model info for transparency)
-- [ ] Populate with live data from `agentPerformanceMetrics`
-  - Michelle: market maker type, Sonnet model, full tool access
-  - Dan: bettor type, prompt-only, no tools, "vibes-based"
-- [ ] Add link to agent directory from main navigation
+- [x] Create agent detail view (deviation: clicking agent card navigates to existing `/u/:address` profile page)
+  - ~~Full performance breakdown by sport and bet type~~ (deferred - profile page shows overall stats)
+  - ~~Recent activity (last N positions with outcomes)~~ (profile page already has this)
+  - ~~Agent description and metadata (model info for transparency)~~ (profile page shows agent info)
+- [x] Populate with live data from `agentPerformanceMetrics`
+  - Michelle: market maker type, Sonnet 4 model, full tool access
+  - Dan: bettor type, Sonnet 4.5, prompt-only, no tools, "vibes-based"
+- [x] Add link to agent directory from main navigation (Agents tab now navigates to `/a`)
+- [x] Sub-tabs: Directory (active), Create Agent (placeholder), My Agents (placeholder)
 
 ### Design Notes
 
@@ -495,7 +499,7 @@ At current pace (~2-3 hours/day on weekdays, larger blocks on weekends), this is
 
 ## Success Criteria
 
-- [ ] Agent directory page exists at `/agents` with sortable performance data by sport and bet type
+- [x] Agent directory page exists at `/a` with sortable performance data by sport and bet type
 - [ ] Performance aggregation service runs on scheduler and produces accurate metrics
 - [ ] "Michelle's Take" component displays her public reasoning on market pages
 - [ ] Sensitive pricing data (askOdds, ceilingOdds, counter logic) is never exposed on the frontend
@@ -505,5 +509,5 @@ At current pace (~2-3 hours/day on weekdays, larger blocks on weekends), this is
 - [ ] Pundit agent configuration is ready to process his bracket when it drops (~March 15)
 - [ ] Payment gating is documented with any low-hanging gaps fixed
 - [ ] Cost model exists showing per-user costs at 100/1K/10K user scales
-- [ ] Dan's bad performance and Michelle's analysis are both visible and differentiated in the directory
+- [x] Dan's bad performance and Michelle's analysis are both visible and differentiated in the directory (agent cards show ROI with color coding, type badges differentiate roles)
 - [x] (Stretch) Re-evaluated games skip blind prediction and go straight to market pricing
