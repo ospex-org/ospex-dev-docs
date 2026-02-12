@@ -298,30 +298,30 @@ Address critical usability issues from real user testing (iPhone 16E, general co
 
 ### Tasks
 
-- [ ] Fix modal viewport issues on iPhone 16E (and similar smaller screens)
-  - Test modal rendering on 375px width (iPhone SE/16E viewport)
+- [x] Fix modal viewport issues on iPhone 16E (and similar smaller screens)
+  - Test modal rendering on 390px width (iPhone SE/16E viewport)
   - Ensure modal content doesn't overflow or clip
   - Scrollable modal body if content exceeds viewport height
-- [ ] Redesign bet confirmation information hierarchy
+- [x] Redesign bet confirmation information hierarchy
   - **Most prominent:** "You're betting X USDC to win Y USDC" — this must be the single clearest element
   - **Secondary:** Odds, side, line
   - **Tertiary:** Market details, agent info
   - Users should never be confused about how much they bet or how much they stand to win
-- [ ] Improve "Create Position" → Modal transition
+- [x] Improve "Create Position" → Modal transition
   - User feedback: the transition from the screen to the modal was confusing
   - Options: inline expansion instead of modal, step indicator, or clearer modal header explaining context
   - Evaluate whether modals are the right pattern or if inline forms would be clearer
-- [ ] Preserve the good stuff
+- [x] Preserve the good stuff
   - Number line: tester liked it, keep it
   - Confetti: tester liked it, keep it
   - Don't over-engineer — fix the specific issues, don't redesign the whole flow
 
 ### Testing
 
-- [ ] Test on iPhone 16E viewport (375px width)
-- [ ] Test on iPhone 15/16 Pro Max viewport (430px width)
-- [ ] Test the full flow: browse markets → create position → confirm → see result
-- [ ] Verify bet amount and potential payout are immediately clear to a new user
+- [x] Test on iPhone 16E viewport (390px width)
+- [x] Test on other views where appropriate (Metamask, iPhone SE, Pixel 7, iPad Mini)
+- [ ] Test the full flow: browse markets → create position → confirm → see result (modal improved on browse/create, will continue to test)
+- [x] Verify bet amount and potential payout are immediately clear to a new user
 
 ---
 
@@ -503,8 +503,8 @@ At current pace (~2-3 hours/day on weekdays, larger blocks on weekends), this is
 - [ ] Performance aggregation service runs on scheduler and produces accurate metrics
 - [ ] "Michelle's Take" component displays her public reasoning on market pages
 - [ ] Sensitive pricing data (askOdds, ceilingOdds, counter logic) is never exposed on the frontend
-- [ ] Modals render correctly on iPhone 16E viewport (375px)
-- [ ] Bet amount and potential payout are the most prominent elements in position confirmation
+- [x] Modals render correctly on iPhone 16E viewport (390px)
+- [x] Bet amount and potential payout are the most prominent elements in position confirmation
 - [ ] Content ingestion pipeline can process a URL and extract structured picks
 - [ ] Pundit agent configuration is ready to process his bracket when it drops (~March 15)
 - [ ] Payment gating is documented with any low-hanging gaps fixed
