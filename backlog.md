@@ -2,7 +2,7 @@
 
 *Living document for features, improvements, and ideas not yet scheduled into milestones.*
 
-*Last updated: February 8, 2026*
+*Last updated: February 12, 2026*
 
 ---
 
@@ -60,6 +60,7 @@ Building on M33 foundation + M38 breadth work. Depth items for after breadth is 
 | **Document gating strategy** | How do we prevent unauthorized endpoint access? | Medium |
 | **Model configuration system** | Per-agent model selection, easy switching | Medium |
 | **Protocol documentation (internal)** | The protocol has many baked-in mechanics (odds deviation checks, expiry defaults, leaderboard configurations) that aren't documented anywhere except code. Growing complexity risk. | Medium |
+| **Sport ID mapping consolidation** | Multiple sport-to-ID mappings scattered across codebase: JSONOdds IDs (canonical, stored in Firebase), Rundown API IDs (different numbering), smart contract LeagueId enum, and at least one ad-hoc mapping that may have been implemented from an incomplete milestone doc comment. Need a single canonical sport resolver service (similar to teamResolver pattern from M40 Track 5) with adapter functions for each external API. Currently a source of subtle bugs and catch-all mismatches. | Medium |
 
 ---
 
@@ -71,6 +72,7 @@ Building on M33 foundation + M38 breadth work. Depth items for after breadth is 
 - [ ] Agent marketplace / discovery
 - [ ] Agent vs agent competitions
 - [ ] Personality-driven agents (Degen Dan as template)
+- [ ] **Agent archetype radar chart** — visual identity system for agents based on five strategy axes: **Pundit** (tailing/fading expert content), **Team** (deep knowledge on specific teams), **Situational** (travel, fatigue, weather, scheduling spots), **Analyst** (ELO, statistical systems, quantitative models), **Sentiment** (public betting %, sharp money signals, line movements). Each axis represents tool usage and prompt weighting. Radar chart on agent cards immediately communicates what kind of bettor the agent is. Natural tradeoffs — can't max all five without hitting token budgets and conflicting signals, which creates interesting build decisions. Target: before 2026 NFL season. M40 Track 5 (pundit pipeline) is proof-of-concept for the Pundit axis.
 
 ### Sports Expansion
 
@@ -108,6 +110,25 @@ Need to decide:
 ### On Degen Dan
 
 Keep him exactly as-is — he's the "baseline" agent that shows users can build simple prompt-only agents if they want. No tools, just vibes. His consistent losing is actually valuable — users could fade him profitably.
+
+### On Agent Archetype System (Radar Chart)
+
+Five strategy axes that define an agent's identity:
+1. **Pundit** — Ingests content from sports pundits/experts. Tails, fades, or blends. Tools: Firecrawl content ingestion, pundit picks pipeline.
+2. **Team** — Deep knowledge on specific teams. Bets on or against based on roster depth, coaching tendencies, historical patterns. Tools: roster data, injury reports, team-specific stats.
+3. **Situational** — Weighs contextual factors: travel distance, back-to-backs, rest days, altitude, revenge games, scheduling spots. Bets on the belief that these factors are over/underrated by the market. Tools: schedule data, travel calculations, rest day tracking.
+4. **Analyst** — Quantitative/statistical approach. ELO ratings, power rankings, advanced metrics, model-driven predictions. Tools: custom ELO system, statistical APIs, historical data.
+5. **Sentiment** — Market-derived signals. Public betting percentages, sharp money indicators, line/price movements, steam moves. Tools: odds APIs, line movement tracking, betting percentage data.
+
+Each axis is 0-100 representing how heavily that strategy influences the agent's final decision. The radar chart visualizes this on agent cards in the directory. An agent's archetype is determined by its tool access and prompt weighting — not self-reported.
+
+Key insight: natural tradeoffs exist. Maxing all five axes would require massive token budgets and produce conflicting signals. The constraint is what makes agent building interesting.
+
+Milestone mapping:
+- M40 Track 5 (pundit pipeline) = Pundit axis proof of concept
+- M33/M38 sports intelligence = Situational + Analyst axis foundation
+- Future odds/line movement tracking = Sentiment axis
+- Agent creation UI (M41+) = where users configure their mix
 
 ### On Agent Config as User Settings
 
