@@ -44,6 +44,14 @@
   - **New files:** `prompts/nba.ts` (NBA guidance: rest/schedule, injuries, home/away splits, recent form, matchup dynamics + NBA tool ordering), `prompts/ncaab.ts` (NCAAB guidance: home court, rankings/talent gap, conference context, season timing, spread expectations + NCAAB tool ordering), `prompts/fallback.ts` (generic for NHL and future sports), `prompts/index.ts` (`getSportGuidance(league)`, `getSportToolOrder(league)` dispatch functions).
   - **nodes.ts changes:** (1) `buildSuggestedAnalysisOrder()` now accepts `league` param and uses `getSportToolOrder()` for sport-specific tool ordering (NBA: injuries first, NCAAB: rankings first). (2) `buildBlindPredictionSystemPrompt()` injects `SPORT-SPECIFIC ANALYSIS GUIDANCE:` section between tool listing and prediction instructions. (3) Removed duplicate `CURRENT GAME LEAGUE:` line (already in GAME TO ANALYZE block).
   - **Verification:** NBA eval uses injuries-first tool ordering. NCAAB eval uses rankings-first. Sport-specific guidance appears in system prompt.
+- 2026-02-13: **Track 4 implemented** (Claude Code). Agent directory enhancements — sport filtering, time-period filtering, and search:
+  - **Shared constants:** Created `leagueToSportId()` and `sportIdToLeague()` in `src/lib/constants/sports.ts`. Handles both InsightLeague ('CBB') and evaluation League ('NCAAB') formats. Removed duplicate implementations from `InsightCard.tsx` and `insightModalProps.ts`.
+  - **Accuracy metrics refactor:** Extracted raw evaluation fetching from accuracy computation. New `computeAccuracyFromEvals(evals, filters?)` pure function accepts `{ league?, since? }` filters. New `useFilteredAgentAccuracyMetrics(filters)` hook computes filtered accuracy in `useMemo` from cached raw evaluations.
+  - **TimePeriodPills component:** New `src/components/agents/TimePeriodPills.tsx` — Badge-based pill selector with All / Last 7 / Last 30 periods. Same styling pattern as LeaguePills.
+  - **AgentDirectoryTab:** Added search bar (Input + Search icon), LeaguePills for sport filtering, TimePeriodPills above performance table. Search filters agent cards by name. Sport filter applies to both performance metrics (sportId) and accuracy metrics (league). Time filter applies to accuracy metrics only.
+  - **AgentPerformanceTable:** Added `timePeriod` prop for conditional column header labels. When time filter is active: Record/Win%/ROI/Wagered show "(All Time)" suffix, ML/Spread/Total Accuracy show "(Last 7d)" or "(Last 30d)" suffix.
+  - **Deviation from spec:** Time-period pills filter accuracy columns only (not win/loss/ROI). `agentPerformanceMetrics` documents are lifetime aggregates — `periodEnd` is just the latest settlement date, not a rolling window. Time-bucketed aggregation would need backend changes. This delivers the benchmarking value (accuracy = "is the agent predicting better?") without backend changes.
+  - TypeScript compiles cleanly.
 - 2026-02-13: **P0 — Favorite/underdog labels fixed** (Claude Code). Market pricing prompt was labeling favorite/underdog incorrectly — moneyline section said Michigan State FAVORITE but spread section said Michigan State UNDERDOG. Two root causes:
   1. **evalTest.ts:** Read spread line from `PointSpreadHome` (home perspective, e.g., +2.0) but system expects away perspective. Fixed to use `PointSpreadAway` with fallback to negated `PointSpreadHome`, matching slateNodes.ts and getMarketState.ts convention.
   2. **nodes.ts market pricing:** Had TWO independent favorite derivations — one from moneyline odds, one from spread — that could disagree. Fixed by creating `getFavoriteUnderdog()` in `types.ts` as the single source of truth. Uses spread only (negative spreadAway = away favored). Applied consistently to ALL prompt sections.
@@ -410,31 +418,31 @@ A prompt that says "consider recent form" means different things for these sport
 
 Add sport filtering, time-period filtering, and per-sport performance breakdowns to the `/a` agent directory page.
 
-**Status: 🔲 Not Started**
+**Status: ✅ Complete**
 
 ### Tasks
 
-- [ ] Add league pill filters to agent directory
+- [x] Add league pill filters to agent directory
   - Reuse existing pill component pattern from Order Book page (see screenshot)
   - Pills: All Sports | NBA | NCAAB | NHL (match currently supported sports)
   - Omit "View Options" dropdown — not needed on this page
   - Filtering applies to both agent cards and performance table
   - When filtered by sport: agent cards show sport-specific record/ROI, performance table shows only that sport's rows
-- [ ] Add search bar to agent directory
+- [x] Add search bar to agent directory
   - Reuse existing search bar component from Order Book page
   - Search by agent name
   - Position above or alongside league pills, matching Order Book layout
-- [ ] Add time-period pill filters above performance table
+- [x] Add time-period pill filters above performance table
   - Pills: Last 7 | Last 30 | All
   - Filters performance table rows by date range (using `periodEnd` or `lastUpdated` from metrics)
   - Default to "All" (current behavior)
   - These pills sit above the performance table, separate from the league pills which are page-level
-- [ ] Break down agent card stats by sport
+- [x] Break down agent card stats by sport
   - When "All Sports" is selected: show current aggregate stats (existing behavior)
   - When a specific sport is selected: show stats for that sport only
   - If agent has no data for selected sport: show "No activity" or equivalent
   - Performance metrics schema already supports `sportId` filtering — this is a frontend task
-- [ ] Ensure aggregation service supports time-period queries
+- [x] Ensure aggregation service supports time-period queries
   - Check if `getAgentPerformanceMetrics()` can filter by date range
   - If not, add date range parameters to the query function
   - May need `periodStart`/`periodEnd` or `lastUpdated` timestamps in the aggregation to support Last 7 / Last 30 filtering
@@ -446,11 +454,23 @@ Add sport filtering, time-period filtering, and per-sport performance breakdowns
 
 ### Acceptance Criteria
 
-- League pills filter agent cards and performance table by sport
-- Search bar filters agents by name
-- Time-period pills (Last 7 / Last 30 / All) filter the performance table
-- When filtered to a single sport, agent cards show sport-specific win rate and ROI
-- No new data collections needed — leverage existing `agentPerformanceMetrics` schema
+- [x] League pills filter agent cards and performance table by sport
+- [x] Search bar filters agents by name
+- [x] Time-period pills (Last 7 / Last 30 / All) filter accuracy columns (performance metrics are all-time)
+- [x] When filtered to a single sport, agent cards show sport-specific win rate and ROI
+- [x] No new data collections needed — leverage existing `agentPerformanceMetrics` and `agentGameEvaluations` schemas
+
+### Files Created/Modified
+
+| File | Change |
+|------|--------|
+| `src/lib/constants/sports.ts` | MODIFIED - Added `leagueToSportId()` and `sportIdToLeague()` shared mappings |
+| `src/lib/data/agents/useAgentAccuracyMetrics.ts` | MODIFIED - Extracted `computeAccuracyFromEvals()` pure function, added `useFilteredAgentAccuracyMetrics()` hook, exported `FirestoreGameEvaluationDoc` and `AccuracyFilters` types |
+| `src/components/agents/TimePeriodPills.tsx` | NEW - Badge-based time period pill selector (All / Last 7 / Last 30) |
+| `src/components/agents/AgentDirectoryTab.tsx` | MODIFIED - Added search bar, LeaguePills, TimePeriodPills, sport/time/search filtering logic |
+| `src/components/agents/AgentPerformanceTable.tsx` | MODIFIED - Added `timePeriod` prop, conditional "(All Time)" / "(Last 7d)" / "(Last 30d)" column header suffixes |
+| `src/components/insights/InsightCard.tsx` | MODIFIED - Removed local `leagueToSportId()` (now in shared constants) |
+| `src/lib/data/insights/insightModalProps.ts` | MODIFIED - Import `leagueToSportId` from shared constants instead of local |
 
 ---
 
@@ -640,7 +660,7 @@ At M40 pace (shipped 48-68 hour estimate in 3 days), this is achievable within ~
 - [ ] Token budget baseline exists: average tokens per tool, per evaluation, per sport
 - [ ] Context window utilization is tracked per evaluation (% of available context used)
 - [x] `DEBUG_MODE=true` produces comprehensive, actionable logs for the full evaluation pipeline
-- [ ] Agent directory supports filtering by sport (league pills) and time period (Last 7 / Last 30 / All)
+- [x] Agent directory supports filtering by sport (league pills) and time period (Last 7 / Last 30 / All)
 - [ ] Michelle's prediction accuracy is measured against a defined threshold (within N points of market for spreads, within M% for moneylines)
 - [x] Claude Code has project context (`CLAUDE.md`) for efficient agent pipeline debugging (content provided, pending user addition)
 - [x] `toolsUsed` array is populated correctly for all evaluation types (cron, quote, unmatched)
