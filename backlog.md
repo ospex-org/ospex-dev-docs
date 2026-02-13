@@ -2,7 +2,7 @@
 
 *Living document for features, improvements, and ideas not yet scheduled into milestones.*
 
-*Last updated: February 12, 2026*
+*Last updated: February 13, 2026*
 
 ---
 
@@ -39,6 +39,7 @@ Building on M33 foundation + M38 breadth work. Depth items for after breadth is 
 | **Weather** | For outdoor games (NFL, MLB) | Weather API |
 | **Historical matchups** | H2H record, margin trends | ESPN or custom tracking |
 | **Advanced stats** | Basketball Reference, Hockey Reference | Scraping or API - legal gray area |
+| **KenPom / NCAAB analytics** | Efficiency metrics, tempo, strength of schedule | KenPom API or scraping - investigate before March Madness. ESPN/Supabase only provides basic standings for NCAAB (no last10, limited stats). KenPom would give Michelle much richer analytical depth for college basketball. Priority: before March 20 tournament start. |
 
 ### Revenue / Gating
 
