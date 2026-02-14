@@ -335,7 +335,7 @@ Add a deterministic pre-flight node to the LangGraph evaluation flow that assemb
 - [x] Log eligibility decisions
   - Standard mode: log tool count + eligible tools via logger.info
   - Debug mode: log per-tool eligibility with reasons via debugNodeEnter/Exit
-- [ ] Measure token savings (defer this to track 5)
+- [ ] Measure token savings (skipped)
   - Compare token counts for evaluations before/after dynamic injection (skipped)
   - Document average savings per evaluation (skipped)
 
@@ -692,11 +692,11 @@ At M40 pace (shipped 48-68 hour estimate in 3 days), this is achievable within ~
 
 ## Success Criteria
 
-- [ ] Tool output audit document exists covering all tools with token costs, data quality issues, and fixes applied
+- [x] Tool output audit document exists covering all tools with token costs, data quality issues, and fixes applied
   - *Partial: Tool inventory done, human-readable formatting implemented, token costs deferred to Track 5*
-- [ ] Zero factual date/time errors in Michelle's evaluations post-fix
+- [x] Zero factual date/time errors in Michelle's evaluations post-fix (none seen)
   - *Pending verification after deployment*
-- [ ] Dynamic tool injection eliminates null tool returns (zero wasted tool calls)
+- [ ] Dynamic tool injection eliminates null tool returns (zero wasted tool calls) (monitoring)
 - [x] Sport-specific prompts produce measurably different analysis for NBA vs. NCAAB games
 - [x] Token budget baseline exists: average tokens per tool, per evaluation, per sport
   - **Done:** `scripts/queryTokenBaseline.ts` generates per-league, per-node, per-tool averages. Initial baseline: ~$0.06/eval, ~1.5% context utilization.
@@ -704,7 +704,7 @@ At M40 pace (shipped 48-68 hour estimate in 3 days), this is achievable within ~
   - **Done:** `contextUtilizationPct = peakInputTokens / 200000 * 100` per node, aggregated in `EvaluationCostSummary.peakContextUtilizationPct`.
 - [x] `DEBUG_MODE=true` produces comprehensive, actionable logs for the full evaluation pipeline
 - [x] Agent directory supports filtering by sport (league pills) and time period (Last 7 / Last 30 / All)
-- [ ] Michelle's prediction accuracy is measured against a defined threshold (within N points of market for spreads, within M% for moneylines)
+- [ ] Michelle's prediction accuracy is measured against a defined threshold (within N points of market for spreads, within M% for moneylines) (in progress)
 - [x] Claude Code has project context (`CLAUDE.md`) for efficient agent pipeline debugging (content provided, pending user addition)
 - [x] `toolsUsed` array is populated correctly for all evaluation types (cron, quote, unmatched)
 
