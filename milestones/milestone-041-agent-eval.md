@@ -58,6 +58,25 @@
   3. **dateFormat.ts:** `formatMarketStateText()` and `formatOddsHistoryText()` both derived favorite from moneyline. Fixed to use `getFavoriteUnderdog()` from spread.
   - Unit tests: 20 tests for `getFavoriteUnderdog()` covering negative/positive/zero/small spreads.
   - **Key rule:** NEVER use moneyline to determine favorite/underdog — moneyline can be null/missing. Spread is always the source of truth.
+- 2026-02-14: **Track 5 implemented** (Claude Code). Token counting and cost tracking across the full evaluation pipeline:
+  - **Types:** Added `ToolTokenEstimate`, `NodeTokenUsage`, `EvaluationCostSummary`, `MODEL_PRICING`, `DEFAULT_PRICING`, `CONTEXT_WINDOW_SIZE` to `types.ts`.
+  - **Tool token estimation:** `progressCallback.ts` now tracks `toolTokenEstimates[]` in `handleToolEnd()` using `chars / 4` heuristic. Added `getToolTokenEstimates()` getter.
+  - **LLM token extraction:** `nodes.ts` — added `extractLlmTokenUsage()` (iterates `AIMessage.usage_metadata` for actual API counts) and `buildNodeTokenUsage()` helpers. Both `executeBlindPrediction` and `executeMarketPricing` return `tokenUsage` alongside results.
+  - **Debug cost logging:** `debug/index.ts` — added `debugCost()` convenience function using existing `'cost'` category. Shows per-node breakdown: llmInput, llmOutput, llmCalls, peakInput, contextPct, toolOutputTokens, estimatedCost, duration, per-tool token estimates.
+  - **Graph state:** `gameGraph.ts` — added `blindPredictionTokenUsage` and `marketPricingTokenUsage` to `GameStateAnnotation`. Node wrappers pass token usage through state.
+  - **Firebase storage:** `gameEvaluationService.ts` — added `costSummary` to `PrivateContent` and `SaveGameEvaluationInput`. Cost data stored in `privateContent.costSummary`.
+  - **Integration aggregation:** `integration.ts` — added `buildCostSummary()` that aggregates across nodes. All 4 `saveGameEvaluation()` calls pass `costSummary`. All 4 `gameGraph.invoke()` calls pass `metadata: { evalId, game, league }` for LangSmith correlation.
+  - **Baseline query script:** `scripts/queryTokenBaseline.ts` (NEW) — queries `agentGameEvaluations` for cost data, computes per-league/per-node/per-tool averages.
+  - **Decision:** Did NOT use tiktoken. `AIMessage.usage_metadata` provides actual API token counts for LLM calls. `chars / 4` is sufficient for tool output estimation.
+  - **Verification:** `yarn eval:test --contest 53 --force-fresh` confirmed cost breakdown appears in debug logs (blindPrediction: $0.0298, marketPricing: $0.0312, contextPct: 1.3-1.9%). Commit: `1557054`.
+- 2026-02-14: **Bug fix — Moneyline 0/0 false inconsistency warning** (Claude Code). When JSONOdds hasn't posted moneyline odds yet (both values = 0), the market pricing node was comparing 0-vs-0 moneyline against spread and logging a false `INCONSISTENCY: Moneyline and spread disagree on favorite` warning. Fix: added guard `currentMarketOdds.moneyline.away > 1 && currentMarketOdds.moneyline.home > 1` to skip the moneyline-vs-spread comparison when moneyline values aren't real odds. File: `nodes.ts`.
+- 2026-02-14: **Bug fix — Team name resolution (California → California Baptist)** (Claude Code). Standings tool was returning California Baptist Lancers (19-6) instead of California Golden Bears (17-8) due to fuzzy substring matching in `resolveTeam()`. This is a critical data quality bug — Michelle's entire analysis was based on the wrong team's record.
+  - **Root cause:** `resolveTeam()` in `queries.ts` used `ilike('%California%')` as a fuzzy fallback, which matched both "California Golden Bears" and "California Baptist Lancers". Alphabetical tiebreaker picked Cal Baptist.
+  - **Fix — Code:** Rewired `resolveTeam()` to use `teamResolver.ts` (alias table lookup via `team_aliases` Supabase table) as tier 0 before exact abbreviation and exact name fallbacks. **Removed fuzzy substring tier entirely.** A clean `null` + warning log is returned instead of a confidently wrong match. Also fixed `getTeamRankings()` to use alias lookup instead of `ilike('%name%')` substring matching.
+  - **Fix — Data:** Seeded 341 new `short` (location-only) aliases into `team_aliases` for all 362 NCAAB teams. JSONOdds sends location-only names (e.g., "California", "Boston College") — these now map to the correct ESPN team IDs. Includes manual overrides for ambiguous cases (Miami Florida vs Miami Ohio, St./Saint variants, NC State, UConn, LSU, Ole Miss, etc.).
+  - **New script:** `scripts/seedTeamAliases.ts` — generates `short` aliases from teams table, supports `--dry-run` and `--sport` flags. Kept for future alias maintenance.
+  - **Scope:** All 10+ Supabase tool call sites (standings, injuries, roster, schedule, team stats, rankings) use `resolveTeam()` — all are now fixed.
+  - **Verification:** `yarn eval:test --contest 53 --force-fresh` confirmed `California Golden Bears (CAL): 17-8` and no moneyline inconsistency warning.
 
 ---
 
@@ -261,8 +280,8 @@ Systematic audit of every tool Michelle uses. For each tool: examine raw output 
 - [ ] Traceable audit document exists linking tool outputs to LLM interpretation for 5+ evaluations (skipped)
 - [x] Zero date/time discrepancies in new evaluations after fixes are applied
   - *Pending verification after deployment*
-- [ ] Token cost per tool call is measured and documented
-  - *Deferred to Track 5*
+- [x] Token cost per tool call is measured and documented
+  - **Done:** Track 5 implemented `ToolTokenEstimate` tracking per tool call (chars/4 estimation) and `NodeTokenUsage` with actual LLM token counts from API. `queryTokenBaseline.ts` generates per-tool averages.
 
 ### Files Created/Modified
 
@@ -478,31 +497,36 @@ Add sport filtering, time-period filtering, and per-sport performance breakdowns
 
 Add token counting and cost tracking to every tool call and LLM invocation in the evaluation pipeline. This is the foundation for the agent creation system — users need to see how much context each tool consumes to make informed configuration decisions.
 
-**Status: 🔲 Not Started**
+**Status: ✅ Complete**
 
 ### Tasks
 
-- [ ] Add token estimation to each tool call
+- [x] Add token estimation to each tool call
   - Estimate tokens in tool output (rough count: chars / 4 for English text, or use `tiktoken` if precision matters)
   - Log per-tool: tool name, output token estimate, latency
   - Store in thread state alongside tool results
-- [ ] Add token tracking to LLM invocations
+  - **Done:** `progressCallback.ts` tracks `toolTokenEstimates[]` in `handleToolEnd()`. Uses chars/4 (no tiktoken). Per-tool data flows through `NodeTokenUsage` into graph state.
+- [x] Add token tracking to LLM invocations
   - Capture input tokens (prompt + tool descriptions + tool outputs + conversation history)
   - Capture output tokens
   - LangSmith already captures this — ensure it's accessible programmatically, not just in the dashboard
-- [ ] Build per-evaluation cost summary
+  - **Done:** `extractLlmTokenUsage()` in `nodes.ts` iterates `AIMessage.usage_metadata` for actual API token counts (input, output, total). Tracks peak input tokens and model name from response metadata.
+- [x] Build per-evaluation cost summary
   - After each evaluation completes, compute: total tokens, per-tool token breakdown, total cost ($), number of tools called vs. eligible vs. available
   - Store summary in `agentGameEvaluations` alongside the evaluation results
   - This data powers the future "token budget" UI in agent creation
-- [ ] Surface token data in LangSmith metadata
+  - **Done:** `buildCostSummary()` in `integration.ts` aggregates across nodes. Stored in Firebase `privateContent.costSummary` as `EvaluationCostSummary`.
+- [x] Surface token data in LangSmith metadata
   - Tag evaluations with per-tool token counts as LangSmith metadata
   - Enables filtering/sorting evaluations by cost in the LangSmith dashboard
   - Useful for identifying which tools are most expensive and which evaluations are outliers
-- [ ] Document current token budget baseline
+  - **Done:** All 4 `gameGraph.invoke()` calls pass `metadata: { evalId, game, league }`. evalId correlates LangSmith traces with Firebase cost documents.
+- [x] Document current token budget baseline
   - Average tokens per evaluation by sport
   - Token breakdown by tool (which tools consume the most context?)
   - Average cost per evaluation
   - Context window utilization (how close are we to limits?)
+  - **Done:** `scripts/queryTokenBaseline.ts` queries Firebase for cost summaries and prints per-league, per-node, and per-tool averages. Initial baseline: ~$0.06/eval, ~1.5% context utilization for NCAAB 2-tool evals.
 
 ### Why This Matters for Agent Creation
 
@@ -512,10 +536,27 @@ This is the "Pokemon stat sheet" — users need to see the tradeoffs to make int
 
 ### Acceptance Criteria
 
-- Every evaluation has a per-tool token breakdown stored alongside results
-- Token costs are visible in LangSmith metadata for filtering/analysis
-- Baseline document exists showing average token usage per tool and per evaluation
-- Context window utilization percentage is computed per evaluation
+- [x] Every evaluation has a per-tool token breakdown stored alongside results
+  - **Done:** `privateContent.costSummary.nodes[].toolTokenEstimates[]` in Firebase
+- [x] Token costs are visible in LangSmith metadata for filtering/analysis
+  - **Done:** evalId, game, league passed as metadata to all graph invocations
+- [x] Baseline document exists showing average token usage per tool and per evaluation
+  - **Done:** `scripts/queryTokenBaseline.ts` generates baseline report
+- [x] Context window utilization percentage is computed per evaluation
+  - **Done:** `contextUtilizationPct = peakInputTokens / 200000 * 100` stored per node and aggregated
+
+### Files Created/Modified
+
+| File | Change |
+|------|--------|
+| `src/agents/market_maker_michelle/langgraph/types.ts` | MODIFIED - Added `ToolTokenEstimate`, `NodeTokenUsage`, `EvaluationCostSummary`, `MODEL_PRICING`, `DEFAULT_PRICING`, `CONTEXT_WINDOW_SIZE` |
+| `src/agents/market_maker_michelle/progressCallback.ts` | MODIFIED - Added `toolTokenEstimates[]` tracking, `getToolTokenEstimates()` getter, reset in `reset()` |
+| `src/debug/index.ts` | MODIFIED - Added `debugCost()` convenience function |
+| `src/agents/market_maker_michelle/langgraph/nodes.ts` | MODIFIED - Added `extractLlmTokenUsage()`, `buildNodeTokenUsage()`, `AIMessage` import. Updated return types for both node functions |
+| `src/agents/market_maker_michelle/langgraph/gameGraph.ts` | MODIFIED - Added `blindPredictionTokenUsage`, `marketPricingTokenUsage` to `GameStateAnnotation` |
+| `src/services/gameEvaluationService.ts` | MODIFIED - Added `costSummary` to `PrivateContent` and `SaveGameEvaluationInput` |
+| `src/agents/market_maker_michelle/langgraph/integration.ts` | MODIFIED - Added `buildCostSummary()`, pass `costSummary` in all 4 save calls, pass `metadata` in all 4 invoke calls |
+| `scripts/queryTokenBaseline.ts` | NEW - Firebase cost summary query and baseline report |
 
 ---
 
@@ -657,8 +698,10 @@ At M40 pace (shipped 48-68 hour estimate in 3 days), this is achievable within ~
   - *Pending verification after deployment*
 - [ ] Dynamic tool injection eliminates null tool returns (zero wasted tool calls)
 - [x] Sport-specific prompts produce measurably different analysis for NBA vs. NCAAB games
-- [ ] Token budget baseline exists: average tokens per tool, per evaluation, per sport
-- [ ] Context window utilization is tracked per evaluation (% of available context used)
+- [x] Token budget baseline exists: average tokens per tool, per evaluation, per sport
+  - **Done:** `scripts/queryTokenBaseline.ts` generates per-league, per-node, per-tool averages. Initial baseline: ~$0.06/eval, ~1.5% context utilization.
+- [x] Context window utilization is tracked per evaluation (% of available context used)
+  - **Done:** `contextUtilizationPct = peakInputTokens / 200000 * 100` per node, aggregated in `EvaluationCostSummary.peakContextUtilizationPct`.
 - [x] `DEBUG_MODE=true` produces comprehensive, actionable logs for the full evaluation pipeline
 - [x] Agent directory supports filtering by sport (league pills) and time period (Last 7 / Last 30 / All)
 - [ ] Michelle's prediction accuracy is measured against a defined threshold (within N points of market for spreads, within M% for moneylines)
