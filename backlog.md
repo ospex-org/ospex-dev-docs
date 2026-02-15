@@ -2,7 +2,7 @@
 
 *Living document for features, improvements, and ideas not yet scheduled into milestones.*
 
-*Last updated: February 13, 2026*
+*Last updated: February 14, 2026*
 
 ---
 
@@ -27,6 +27,8 @@
 | **Agent config as user-facing settings** | Current agent configs (edge thresholds, max active bets, risk parameters) are hardcoded magic numbers. These all need to become configurable when users create their own agents. | Large |
 | **Agent rating/tracking UI** | Surface benchmark metrics on frontend; let users run benchmarks (paid feature?) | Large |
 | **Log agent rejection reasoning** | When scanning order book and passing, store WHY (cost: more LLM calls) | Medium |
+| **Overround-proportional pricing strategy** | Agent pricing margins should scale with blind prediction accuracy. When Michelle's prediction closely matches market (e.g., within 1-2 points on spread), she can offer tight, near-zero-vig odds (low overround) symmetrically on both sides — she's confident and wants volume. When her prediction diverges significantly from market, she widens margins (higher overround) and skews directionally — offering slightly better odds on her favored side to attract that action, and worse odds on her unfavorable side. De-vigged fair odds (not raw market odds) should be the baseline anchor since Ospex is zero-vig P2P. Builds on the `computeMarketPositionSummary` directional analysis tool — that tool handles direction, this handles magnitude. | Medium |
+| **Agent wallet monitoring & gas management** | No visibility into agent wallet balances, gas spending, transaction failures, or burn rate. Dan burned through 50 POL with no easy way to trace where it went. Need: (1) admin dashboard or API endpoint showing per-agent wallet balance, recent transactions with gas costs, failed txs with error reasons, and POL burn rate, (2) gas guard logic — agents should check gas price and skip the cycle if network fees exceed a threshold instead of submitting doomed transactions, (3) wallet balance check before submitting (not just USDC allowance). Currently requires manually checking Polygonscan per wallet. Should be built so an agent (e.g., Claude Code) could query the endpoint to manage agent wallets programmatically. | Medium |
 
 ### Sports Intelligence Expansion
 
@@ -62,6 +64,7 @@ Building on M33 foundation + M38 breadth work. Depth items for after breadth is 
 | **Model configuration system** | Per-agent model selection, easy switching | Medium |
 | **Protocol documentation (internal)** | The protocol has many baked-in mechanics (odds deviation checks, expiry defaults, leaderboard configurations) that aren't documented anywhere except code. Growing complexity risk. | Medium |
 | **Sport ID mapping consolidation** | Multiple sport-to-ID mappings scattered across codebase: JSONOdds IDs (canonical, stored in Firebase), Rundown API IDs (different numbering), smart contract LeagueId enum, and at least one ad-hoc mapping that may have been implemented from an incomplete milestone doc comment. Need a single canonical sport resolver service (similar to teamResolver pattern from M40 Track 5) with adapter functions for each external API. Currently a source of subtle bugs and catch-all mismatches. | Medium |
+| **Serial evaluation loop for Michelle** | Michelle currently has three independent entry points (cron scheduler, unmatched pair trigger, instant match request) that can invoke the LangGraph concurrently for the same game. This caused a production bug on 2/15/2026 where a cron eval and an unmatched pair eval raced on the same game, and the partial snapshot from the unmatched pair overwrote the complete snapshot from the cron eval. **Refactor to a single work loop**: Michelle surveys all pending work (cron evals, unmatched pairs, instant match requests), picks the highest priority item, completes it fully, saves, then re-evaluates the landscape. No concurrent evaluations of the same game, no partial overwrites, no coordination bugs. Instant match may need special handling (priority interrupt or exemption) since a user is actively waiting. Tradeoff is potential latency increase on lower-priority work, but eliminates an entire class of race condition bugs and makes the pipeline dramatically simpler to reason about and debug. | Medium-Large |
 
 ---
 
